@@ -4,18 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "event-log-gen"
-version = "0.1.0"
-description = "Synthetic process event log generator from YAML configuration"
+version = "0.5.0"
+description = "Generate realistic synthetic process event logs for testing and developing process mining software"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Karl Romer", email = "karlromer.dev@gmail.com"}
 ]
-keywords = ["process-mining", "event-log", "synthetic-data", "pm4py", "xes"]
+keywords = ["process-mining", "event-log", "synthetic-data", "pm4py", "xes", "testing"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "Topic :: Software Development :: Testing",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
@@ -48,10 +50,10 @@ dev = [
 event-log-gen = "event_log_gen.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/event-log-gen"
-Documentation = "https://github.com/yourusername/event-log-gen/blob/main/docs/USER_GUIDE.md"
-Repository = "https://github.com/yourusername/event-log-gen"
-Issues = "https://github.com/yourusername/event-log-gen/issues"
+Homepage = "https://github.com/karlromer/event-log-gen"
+Documentation = "https://github.com/karlromer/event-log-gen/blob/main/README.md"
+Repository = "https://github.com/karlromer/event-log-gen"
+Issues = "https://github.com/karlromer/event-log-gen/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

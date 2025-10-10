@@ -1,0 +1,271 @@
+"""
+Command-line interface for Event Log Generator
+"""
+
+import sys
+import argparse
+from pathlib import Path
+from typing import Optional
+
+from event_log_gen import (
+    load_config,
+    validate_config,
+    generate_log,
+    export_csv,
+    export_parquet,
+    export_json,
+    export_xes,
+)
+
+
+def cmd_generate(args: argparse.Namespace) -> int:
+    """Generate event logs from configuration"""
+    try:
+        # Load configuration
+        print(f"Loading configuration from {args.config}...")
+        config = load_config(str(args.config))
+
+        # Validate configuration
+        print("Validating configuration...")
+        result = validate_config(config)
+        if not result.valid:
+            print("✗ Configuration has errors:")
+            for error in result.errors:
+                print(f"  - {error}")
+            return 1
+
+        if result.warnings:
+            print("⚠ Configuration warnings:")
+            for warning in result.warnings:
+                print(f"  - {warning}")
+
+        print("✓ Configuration valid")
+
+        # Override config values if specified
+        num_cases = args.cases if args.cases else config.get("num_cases", 100)
+        seed = args.seed if args.seed is not None else config.get("seed", 42)
+
+        # Generate event log
+        print(f"Generating {num_cases} cases (seed={seed})...")
+        df = generate_log(config, seed=seed, num_cases=num_cases)
+        print(f"✓ Generated {len(df)} events across {df['case_id'].nunique()} cases")
+
+        # Create output directory
+        output_dir = Path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Export to requested formats
+        formats = args.format if args.format != ['all'] else ['csv', 'parquet', 'json', 'xes']
+
+        for fmt in formats:
+            output_path = output_dir / f"events.{fmt}"
+            print(f"Exporting to {fmt.upper()}...", end=" ", flush=True)
+
+            if fmt == 'csv':
+                export_csv(df, output_path)
+            elif fmt == 'parquet':
+                export_parquet(df, output_path)
+            elif fmt == 'json':
+                export_json(df, output_path)
+            elif fmt == 'xes':
+                export_xes(df, output_path)
+            else:
+                print(f"✗ Unknown format: {fmt}")
+                continue
+
+            print(f"✓ {output_path}")
+
+        print(f"\n✓ Event logs generated in {output_dir}/")
+        return 0
+
+    except FileNotFoundError as e:
+        print(f"✗ Error: {e}")
+        return 1
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    """Validate configuration file"""
+    try:
+        print(f"Loading configuration from {args.config}...")
+        config = load_config(str(args.config))
+
+        print("Validating configuration...")
+        result = validate_config(config)
+
+        if result.valid:
+            print("✓ Configuration is valid")
+            print(f"\nProcess: {config.get('process_name', 'Unnamed')}")
+            print(f"Activities: {len(config.get('activities', []))}")
+            print(f"Resource pools: {len(config.get('resource_pools', {}))}")
+            return 0
+        else:
+            print("✗ Configuration has errors:")
+            for error in result.errors:
+                print(f"  - {error}")
+            return 1
+
+    except FileNotFoundError as e:
+        print(f"✗ Error: {e}")
+        return 1
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+def cmd_info(args: argparse.Namespace) -> int:
+    """Display information about configuration"""
+    try:
+        config = load_config(str(args.config))
+        result = validate_config(config)
+
+        if not result.valid:
+            print("✗ Configuration is invalid. Run with 'validate' to see errors.")
+            return 1
+
+        print(f"Process: {config.get('process_name', 'Unnamed')}")
+        print(f"Cases to generate: {config.get('num_cases', 100)}")
+        print(f"Random seed: {config.get('seed', 42)}")
+        print(f"Start date: {config.get('start_date', 'Not specified')}")
+        print()
+
+        activities = config.get('activities', [])
+        print(f"Activities ({len(activities)}):")
+        for activity in activities:
+            activity_type = activity.get('type', 'unknown')
+            print(f"  {activity['step']}. {activity['id']} ({activity_type})")
+
+        resource_pools = config.get('resource_pools', {})
+        print(f"\nResource Pools ({len(resource_pools)}):")
+        for pool_name, resources in resource_pools.items():
+            print(f"  {pool_name}: {len(resources)} resources")
+
+        # Count process variants (terminal activities)
+        variants = set()
+        for activity in activities:
+            next_steps = activity.get('next_steps', [])
+            if not next_steps:  # Terminal activity
+                variants.add(activity['id'])
+        print(f"\nProcess Variants: {len(variants)} endpoints")
+
+        return 0
+
+    except FileNotFoundError as e:
+        print(f"✗ Error: {e}")
+        return 1
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create argument parser"""
+    parser = argparse.ArgumentParser(
+        prog='event-log-gen',
+        description='Generate synthetic process event logs for testing and development',
+        epilog='For more information, visit: https://github.com/karlromer/event-log-gen'
+    )
+
+    parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        help='Enable verbose output'
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+
+    # Generate command
+    gen_parser = subparsers.add_parser(
+        'generate',
+        help='Generate event logs from configuration'
+    )
+    gen_parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        required=True,
+        help='Path to YAML configuration file'
+    )
+    gen_parser.add_argument(
+        '-o', '--output',
+        type=Path,
+        default=Path('output'),
+        help='Output directory (default: output/)'
+    )
+    gen_parser.add_argument(
+        '-f', '--format',
+        nargs='+',
+        choices=['csv', 'parquet', 'json', 'xes', 'all'],
+        default=['all'],
+        help='Export formats (default: all)'
+    )
+    gen_parser.add_argument(
+        '-n', '--cases',
+        type=int,
+        help='Number of cases to generate (overrides config)'
+    )
+    gen_parser.add_argument(
+        '-s', '--seed',
+        type=int,
+        help='Random seed (overrides config)'
+    )
+
+    # Validate command
+    val_parser = subparsers.add_parser(
+        'validate',
+        help='Validate configuration file'
+    )
+    val_parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        required=True,
+        help='Path to YAML configuration file'
+    )
+
+    # Info command
+    info_parser = subparsers.add_parser(
+        'info',
+        help='Display configuration information'
+    )
+    info_parser.add_argument(
+        '-c', '--config',
+        type=Path,
+        required=True,
+        help='Path to YAML configuration file'
+    )
+
+    return parser
+
+
+def main(argv: Optional[list] = None) -> int:
+    """Main entry point"""
+    parser = create_parser()
+    args = parser.parse_args(argv)
+
+    if not args.command:
+        parser.print_help()
+        return 1
+
+    if args.command == 'generate':
+        return cmd_generate(args)
+    elif args.command == 'validate':
+        return cmd_validate(args)
+    elif args.command == 'info':
+        return cmd_info(args)
+    else:
+        parser.print_help()
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

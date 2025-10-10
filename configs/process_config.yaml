@@ -1,0 +1,580 @@
+# ============================================================================
+# Process Configuration: Restaurant Permit Application Workflow
+# ============================================================================
+# This file defines a complete business process for generating synthetic
+# event logs. The structure follows a human-centric, chronological design
+# where each activity is self-contained with all its properties.
+#
+# HOW TO USE THIS FILE:
+# 1. Read activities in order (step 1, 2, 3...) to understand the workflow
+# 2. Modify duration (min/max) to change how long each step takes
+# 3. Adjust next_steps probabilities to change process flow
+# 4. Tune resource profiles (speed/consistency/capacity) for realism
+# 5. Enable/disable anomalies to simulate delays and bottlenecks
+#
+# All inline comments explain parameters and show how to tune them.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# 1. PROCESS METADATA - Global settings for generation
+# ----------------------------------------------------------------------------
+process_name: "Restaurant Permit Application"
+description: |
+  Complete workflow for restaurant permit applications, from initial submission
+  through review, inspection, and final decision (approval/rejection/withdrawal).
+
+  Process includes 5 natural variants:
+  1. Direct Approval (58%) - Happy path, no complications
+  2. Request More Info (24%) - Single rework loop for additional information
+  3. Rejected at Final (10%) - Full process ending in rejection
+  4. Withdrawn (5%) - Applicant withdraws after info request
+  5. Early Rejection (3%) - Fails basic requirements at intake
+
+# Generation settings
+num_cases: 1000              # How many permit applications to generate
+seed: 42                     # Random seed for reproducibility (same seed = same output)
+
+# Time settings
+start_date: "2024-01-01"     # First case starts on this date
+end_date: "2024-06-30"       # Last case starts before this date (leaves time for completion)
+timezone: "America/New_York" # All timestamps use this timezone
+time_granularity: "seconds"  # Precision: seconds | minutes | hours
+
+# Working hours (business calendar - applies to all activities)
+working_hours:
+  enabled: true              # Set to false to generate 24/7 (no calendar)
+  days: [Monday, Tuesday, Wednesday, Thursday, Friday]  # Working days
+  start_time: "09:00"        # Business day starts (24h format)
+  end_time: "17:00"          # Business day ends
+  holidays:                  # Non-working days (US federal holidays example)
+    - "2024-01-01"  # New Year's Day
+    - "2024-01-15"  # MLK Jr. Day
+    - "2024-02-19"  # Presidents' Day
+    - "2024-05-27"  # Memorial Day
+    - "2024-07-04"  # Independence Day (if end_date extends)
+  # Note: If an activity completes outside working hours, generator automatically
+  # advances timestamp to next business day start time
+
+# ----------------------------------------------------------------------------
+# 2. ACTIVITIES - Chronological process steps (MAIN SECTION)
+# ----------------------------------------------------------------------------
+# Each activity is self-contained with:
+# - What happens (description)
+# - Who does it (resource_pool, if type=human)
+# - How long it takes (duration)
+# - What happens next (next_steps with probabilities)
+#
+# VARIANTS EMERGE NATURALLY from following the probability tree.
+# Example: Following probability 0.58 (direct to health_inspection) gives
+# "Direct Approval" variant automatically.
+# ----------------------------------------------------------------------------
+
+activities:
+  # ==========================================================================
+  # STEP 1: Application Submitted (Start)
+  # ==========================================================================
+  - step: 1
+    id: submitted
+    name: "Application Submitted"
+    description: "Applicant submits permit application online through city portal"
+    type: automatic              # No human needed (system receives application)
+
+    # How long until next step?
+    duration:
+      min: 24                    # Minimum: 1 day (fastest batch processing)
+      max: 48                    # Maximum: 2 days (slower batch cycle)
+      # Interpretation: Applications are processed in batches, taking 1-2 days
+      # to route to intake validation queue.
+
+    # What happens next?
+    next_steps:
+      - activity: intake_validation
+        probability: 1.0         # 100% of submissions go to intake validation
+        # (All applications must be validated first)
+
+  # ==========================================================================
+  # STEP 2: Intake Validation (First human review)
+  # ==========================================================================
+  - step: 2
+    id: intake_validation
+    name: "Intake Validation"
+    description: "Clerk validates application completeness and basic requirements"
+    type: human                  # Requires a person (clerk)
+    resource_pool: clerks        # Assigned from "clerks" pool (see resources section)
+
+    duration:
+      min: 24                    # Minimum: 1 day (quick review of complete application)
+      max: 72                    # Maximum: 3 days (incomplete requires follow-up checks)
+      # See "HOW DURATION CALCULATION WORKS" section below for the complete 7-step pipeline.
+      # Example: base_duration=48h → speed × consistency × fatigue × delays × peaks → final duration
+
+    next_steps:
+      # BRANCHING POINT: 97% proceed, 3% rejected early
+      - activity: rejected
+        probability: 0.03        # 3% fail basic requirements (Early Rejection variant)
+        # Increase to 0.05 to simulate stricter validation (5% rejection rate)
+
+      - activity: assigned_to_reviewer
+        probability: 0.97        # 97% pass validation and proceed to review
+        # If you increased rejection to 0.05, decrease this to 0.95 (must sum to 1.0)
+
+  # ==========================================================================
+  # STEP 3: Assigned to Reviewer (Automatic routing)
+  # ==========================================================================
+  - step: 3
+    id: assigned_to_reviewer
+    name: "Assigned to Reviewer"
+    description: "System automatically assigns application to available reviewer"
+    type: automatic              # No human (automatic assignment algorithm)
+
+    duration:
+      min: 0.1                   # Minimum: 6 minutes (instant assignment)
+      max: 0.5                   # Maximum: 30 minutes (queue processing delay)
+      # Very fast - automatic system assignment based on reviewer capacity
+
+    next_steps:
+      - activity: review_in_progress
+        probability: 1.0         # 100% proceed to review (automatic routing)
+
+  # ==========================================================================
+  # STEP 4: Review in Progress (Main review activity)
+  # ==========================================================================
+  - step: 4
+    id: review_in_progress
+    name: "Review in Progress"
+    description: "Reviewer evaluates application details, documents, and compliance"
+    type: human                  # Requires reviewer
+    resource_pool: reviewers     # Assigned from "reviewers" pool
+
+    duration:
+      min: 48                    # Minimum: 2 days (straightforward case)
+      max: 120                   # Maximum: 5 days (complex case or high workload)
+      # See "HOW DURATION CALCULATION WORKS" section below for the complete 7-step pipeline.
+      # Example: Fast reviewer (speed=0.7) on 96h base → 67h; Slow reviewer (speed=1.4) → 134h
+
+    next_steps:
+      # MAJOR BRANCHING POINT: 3 possible outcomes
+      - activity: health_inspection
+        probability: 0.58        # 58% proceed directly to inspection (Direct Approval variant)
+        # This is the "happy path" - straightforward applications with no issues
+
+      - activity: request_additional_info
+        probability: 0.39        # 39% require more information (Request More Info variant + others)
+        # Combined probability for variants that need additional info:
+        # - 24% complete after providing info (Request More Info variant)
+        # - 10% get rejected after inspection (Rejected at Final variant)
+        # - 5% applicant withdraws (Withdrawn variant)
+        # Note: These sub-variants emerge from next steps of request_additional_info
+
+      - activity: health_inspection
+        probability: 0.03        # 3% go to inspection but will be rejected (Rejected at Final variant partial)
+        # IMPLEMENTATION NOTE: To distinguish between approval and rejection at inspection,
+        # the generator tracks variant path. In actual implementation, this might be:
+        # probability: 0.61 total to health_inspection (0.58 approve + 0.03 reject)
+
+  # ==========================================================================
+  # STEP 5a: Request Additional Info (Rework loop entry)
+  # ==========================================================================
+  - step: 5a
+    id: request_additional_info
+    name: "Request Additional Information"
+    description: "Reviewer identifies missing documents or clarifications needed"
+    type: automatic              # System sends notification (no manual work)
+
+    duration:
+      min: 24                    # Minimum: 1 day (quick documentation request)
+      max: 168                   # Maximum: 7 days (complex multi-document request)
+      # Time to prepare and send notification to applicant
+
+    next_steps:
+      # BRANCHING: Applicant responds OR withdraws
+      - activity: applicant_provided_info
+        probability: 0.86        # 86% of applicants provide requested info
+        # Calculation: (24% + 10%) / (24% + 10% + 5%) = 34/39 ≈ 0.87
+        # (Request More Info + Rejected at Final) / (all info request paths)
+
+      - activity: withdrawn
+        probability: 0.14        # 14% of applicants withdraw at this point (Withdrawn variant)
+        # Calculation: 5% / 39% ≈ 0.13 (Withdrawn / all info request paths)
+        # To increase withdrawal rate: increase this, decrease applicant_provided_info
+
+  # ==========================================================================
+  # STEP 5b: Applicant Provided Info (External response)
+  # ==========================================================================
+  - step: 5b
+    id: applicant_provided_info
+    name: "Applicant Provided Information"
+    description: "Applicant submits requested documents or clarifications"
+    type: automatic              # System receives submission (no manual processing yet)
+
+    duration:
+      min: 48                    # Minimum: 2 days (quick turnaround)
+      max: 72                    # Maximum: 3 days (applicant delay)
+      # External dependency - time for applicant to gather and submit documents
+
+    next_steps:
+      - activity: review_in_progress
+        probability: 1.0         # 100% return to review for re-evaluation
+        # REWORK LOOP: This creates the loop back to step 4 (review_in_progress)
+        # Second review typically takes 2-14 days (deprioritized vs new cases)
+
+  # ==========================================================================
+  # STEP 6: Health Inspection (On-site verification)
+  # ==========================================================================
+  - step: 6
+    id: health_inspection
+    name: "Health Inspection"
+    description: "Health inspector conducts on-site facility inspection"
+    type: human                  # Requires inspector
+    resource_pool: inspectors    # Assigned from "inspectors" pool
+
+    duration:
+      min: 24                    # Minimum: 1 day (quick scheduling and inspection)
+      max: 168                   # Maximum: 7 days (scheduling conflicts, rescheduling)
+      # See "HOW DURATION CALCULATION WORKS" section below for the complete 7-step pipeline.
+      # Highly variable - inspector performance and anomalies have significant impact
+
+    next_steps:
+      # FINAL BRANCHING: Approve or reject
+      - activity: approved
+        probability: 0.85        # 85% of inspections pass (Direct Approval + Request More Info variants)
+        # Calculation: (58% + 24%) / (58% + 24% + 10%) ≈ 0.89
+        # Adjust to simulate stricter inspections (e.g., 0.80 = 20% fail)
+
+      - activity: rejected
+        probability: 0.15        # 15% of inspections fail (Rejected at Final variant)
+        # Calculation: 10% / (58% + 24% + 10%) ≈ 0.11
+        # Increase to simulate more failing inspections
+
+  # ==========================================================================
+  # FINAL STATES (Process endpoints)
+  # ==========================================================================
+
+  - step: 7a
+    id: approved
+    name: "Approved"
+    description: "Permit application approved - applicant can proceed with business"
+    type: final                  # Terminal state (no next steps)
+
+    duration:
+      min: 24                    # Minimum: 1 day (paperwork finalization)
+      max: 120                   # Maximum: 5 days (administrative backlog)
+      # Note: Duration here represents time to finalize and notify, but
+      # since this is a final state, next_steps is empty
+
+    next_steps: []               # No further steps (case complete)
+
+  - step: 7b
+    id: rejected
+    name: "Rejected"
+    description: "Permit application rejected - applicant notified of reasons"
+    type: final                  # Terminal state
+
+    duration:
+      min: 24                    # Minimum: 1 day (rejection letter preparation)
+      max: 120                   # Maximum: 5 days (detailed rejection documentation)
+
+    next_steps: []               # No further steps (case complete)
+
+  - step: 7c
+    id: withdrawn
+    name: "Withdrawn"
+    description: "Application withdrawn by applicant (no longer pursuing permit)"
+    type: final                  # Terminal state
+
+    duration:
+      min: 12                    # Minimum: 0.5 days (immediate withdrawal processing)
+      max: 48                    # Maximum: 2 days (administrative closure)
+
+    next_steps: []               # No further steps (case complete)
+
+# ----------------------------------------------------------------------------
+# 3. RESOURCES - Who performs the work
+# ----------------------------------------------------------------------------
+# Each resource has performance characteristics:
+# - speed: Multiplier on base duration (0.8 = 20% faster, 1.2 = 20% slower)
+# - consistency: How predictable (1.0 = no variance, 0.6 = ±50% random swing)
+# - capacity: Workload weighting (1.5 = handles 50% more cases than baseline)
+#
+# Resources are assigned using capacity-weighted selection:
+# - Higher capacity resources get more cases
+# - Workload fatigue adds up to 30% slowdown after ~50 cases
+# ----------------------------------------------------------------------------
+
+resource_pools:
+  clerks:
+    - id: clerk_001
+      name: "Alice Martinez"
+      speed: 0.8               # 20% faster than baseline (experienced clerk)
+      consistency: 0.9         # Low variance (±10% random variation)
+      capacity: 1.0            # Standard workload (baseline)
+      # Profile: Fast and predictable - handles standard cases efficiently
+
+    - id: clerk_002
+      name: "Bob Chen"
+      speed: 1.2               # 20% slower than baseline (thorough but slow)
+      consistency: 0.7         # Higher variance (±30% random variation)
+      capacity: 1.3            # Handles 30% more cases (high throughput)
+      # Profile: Slower but high volume - good for backlog clearing
+
+    - id: clerk_003
+      name: "Carol Johnson"
+      speed: 1.0               # Baseline speed (average)
+      consistency: 1.0         # No variance (very predictable)
+      capacity: 0.8            # Handles 20% fewer cases (part-time or specialized)
+      # Profile: Average performer with consistent output
+
+  reviewers:
+    - id: reviewer_001
+      name: "David Kim"
+      speed: 0.7               # 30% faster (senior reviewer, very experienced)
+      consistency: 0.9         # Low variance (predictable expert)
+      capacity: 0.9            # Slightly lower capacity (selective assignments)
+      # Profile: Fast expert but selective workload
+
+    - id: reviewer_002
+      name: "Emma Wilson"
+      speed: 1.4               # 40% slower (junior reviewer or very thorough)
+      consistency: 0.6         # High variance (±40% swing, inconsistent)
+      capacity: 1.5            # Handles 50% more cases (high capacity despite slowness)
+      # Profile: Slow and inconsistent but high volume (learning phase)
+
+    - id: reviewer_003
+      name: "Frank Rodriguez"
+      speed: 1.0               # Baseline speed
+      consistency: 1.0         # No variance (very consistent)
+      capacity: 1.0            # Standard capacity
+      # Profile: Textbook average performer - reliable baseline
+
+    - id: reviewer_004
+      name: "Grace O'Brien"
+      speed: 1.1               # 10% slower (slightly methodical)
+      consistency: 0.8         # Moderate variance (±20% swing)
+      capacity: 1.2            # Handles 20% more cases
+      # Profile: Slightly slower but handles more volume
+
+  inspectors:
+    - id: inspector_001
+      name: "Henry Patel"
+      speed: 0.9               # 10% faster (experienced inspector)
+      consistency: 0.8         # Moderate variance (site-dependent)
+      capacity: 1.0            # Standard capacity
+      # Profile: Fast but variable (depends on site conditions)
+
+    - id: inspector_002
+      name: "Iris Thompson"
+      speed: 1.3               # 30% slower (very thorough inspector)
+      consistency: 0.9         # Low variance (consistently thorough)
+      capacity: 1.1            # Handles 10% more cases
+      # Profile: Slow but consistent - high quality inspections
+
+    - id: inspector_003
+      name: "Jack Anderson"
+      speed: 1.0               # Baseline speed
+      consistency: 1.0         # No variance
+      capacity: 0.9            # Handles 10% fewer cases
+      # Profile: Average performer
+
+# ----------------------------------------------------------------------------
+# 4. CUSTOM ATTRIBUTES - Additional event/case data to track
+# ----------------------------------------------------------------------------
+# Attributes add contextual data to events and cases.
+# Use XES namespace conventions: org:, cost:, location:, perf:, case:
+# ----------------------------------------------------------------------------
+
+event_attributes:
+  # Example: Track cost per activity (event-level - varies per event)
+  - name: cost:amount
+    type: float
+    description: "Processing cost in USD for this activity"
+    generation:
+      distribution: normal     # Use normal distribution for realistic clustering
+      mean: 50.0               # Average cost: $50
+      std: 15.0                # Standard deviation: $15 (most costs $35-$65)
+      min: 10.0                # Minimum cost (floor)
+      max: 200.0               # Maximum cost (ceiling for outliers)
+    # Only applies to human activities (automatic activities have cost: 0)
+    apply_to_types: [human]
+
+case_attributes:
+  # Example: Track application priority (case-level - same for entire trace)
+  - name: case:priority
+    type: string
+    values: ["low", "normal", "high"]
+    probabilities: [0.2, 0.6, 0.2]  # 20% low, 60% normal, 20% high
+    description: "Application priority level (affects processing time in advanced scenarios)"
+    # Note: Current generator doesn't use priority to affect duration, but
+    # attribute is tracked for downstream analysis
+
+  - name: case:applicant_type
+    type: string
+    values: ["new_business", "existing_business", "renewal"]
+    probabilities: [0.4, 0.3, 0.3]
+    description: "Type of applicant (contextual information)"
+
+# ----------------------------------------------------------------------------
+# HOW DURATION CALCULATION WORKS (Read This First!)
+# ----------------------------------------------------------------------------
+# Understanding how base duration, resource effects, and anomalies combine:
+#
+# === CALCULATION PIPELINE (applied in this order) ===
+#
+# STEP 1: SAMPLE base duration from min/max range
+#   Example: duration {min: 24, max: 72}
+#   → base_duration = random.uniform(24, 72) = 48 hours (random value)
+#
+# STEP 2: APPLY resource speed multiplier (if type=human)
+#   Example: clerk_001 has speed=0.8 (20% faster than baseline)
+#   → duration = 48 × 0.8 = 38.4 hours
+#
+# STEP 3: APPLY resource consistency variance (if type=human)
+#   Formula: duration × (1 + (1 - consistency) × random(-0.5, 0.5))
+#   Example: consistency=0.9 means ±10% random swing per case
+#   → duration = 38.4 × (1 + 0.1 × random(-0.5, 0.5))
+#   → Result: 34.6 to 42.2 hours (random per event)
+#
+# STEP 4: APPLY resource fatigue (if type=human, accumulates over time)
+#   Formula: fatigue_factor = 1 + (cases_handled / threshold) × max_slowdown
+#   Example: After 25 cases, threshold=50, max_slowdown=0.3
+#   → fatigue_factor = 1 + (25/50) × 0.3 = 1.15 (15% slower)
+#   → duration = 38.4 × 1.15 = 44.2 hours
+#
+# STEP 5: APPLY random delay anomaly (5% probability, if enabled)
+#   Example: Delay triggered, multiplier = random.uniform(2, 4) = 3.0
+#   → duration = 44.2 × 3.0 = 132.6 hours (bottleneck!)
+#   Note: Only 5% of transitions experience this
+#
+# STEP 6: APPLY peak time anomaly (30% probability, if enabled)
+#   Example: Peak triggered, slowdown_factor = 1.1
+#   → duration = 44.2 × 1.1 = 48.6 hours
+#   Note: 30% of cases hit peak times
+#
+# STEP 7: ENFORCE working hours calendar (if enabled)
+#   If calculated end time is outside business hours (e.g., 6 PM Friday),
+#   advance timestamp to next business day start (e.g., 9 AM Monday)
+#
+# === ANOMALY STACKING ===
+# Delays and peak times are INDEPENDENT (can both trigger):
+# - Neither: 44.2 hours (base + resource effects only)
+# - Peak only (30%): 44.2 × 1.1 = 48.6 hours
+# - Delay only (5%): 44.2 × 3 = 132.6 hours
+# - BOTH (5% × 30% = 1.5%): 44.2 × 3 × 1.1 = 145.9 hours (perfect storm!)
+#
+# === REALISTIC DISTRIBUTION ===
+# For intake_validation (min:24, max:72, clerk pool with varied speeds):
+# - Fastest possible: 24 × 0.8 (fast clerk) = 19.2 hours
+# - Typical range: 35-55 hours (90% of cases fall here)
+# - With delay: 70-220 hours (5% of cases - noticeable bottleneck)
+# - Worst case: 72 × 1.2 (slow clerk) × 1.3 (fatigued) × 4 (delay) × 1.1 (peak)
+#   = 495 hours (~20 days! Rare but realistic outlier)
+#
+# This creates the realistic pattern: most cases predictable, rare bottlenecks.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# 5. ANOMALIES (Optional) - Realism knobs for delays and bottlenecks
+# ----------------------------------------------------------------------------
+# Anomalies inject realistic variance and edge cases into the process.
+# See "HOW DURATION CALCULATION WORKS" above for how these apply.
+# ----------------------------------------------------------------------------
+
+anomalies:
+  enabled: true                # Set to false to disable all anomalies (deterministic process)
+
+  # Random delay events (simulates unexpected bottlenecks)
+  random_delays:
+    enabled: true
+    probability: 0.05          # 5% of transitions experience unexpected delays
+    multiplier_min: 2.0        # Delayed transitions take at least 2x longer
+    multiplier_max: 4.0        # Delayed transitions can take up to 4x longer
+    # How it works:
+    # 1. Sample base duration: random.uniform(24, 72) = 48 hours
+    # 2. Apply resource effects: 48 × 0.8 (speed) = 38.4 hours
+    # 3. Random delay triggers (5% chance): 38.4 × 3 (random multiplier) = 115.2 hours
+    # Result: Transition that would take ~38h now takes ~115h (3x longer bottleneck)
+    # Note: Multiplier applies to CALCULATED duration, not to min/max range
+    # Increase probability to 0.10 for more frequent bottlenecks (10% of transitions)
+
+  # Peak time effects (simulates busy periods)
+  peak_times:
+    enabled: true
+    probability: 0.30          # 30% of cases hit busy periods
+    slowdown_factor: 1.1       # Activities take 10% longer during peaks
+    # How it works:
+    # 1. Sample and apply resource effects: results in 48 hours (calculated)
+    # 2. Peak time triggers (30% chance): 48 × 1.1 = 52.8 hours
+    # Result: Activities during busy periods take 10% longer
+    # Increase slowdown_factor to 1.3 for more pronounced peak effects (30% longer)
+    #
+    # Note: Peak times and delays are INDEPENDENT:
+    # - If both trigger (5% × 30% = 1.5% of cases): duration × 3 × 1.1 = 3.3x longer
+    # - This creates realistic "perfect storm" bottleneck scenarios
+
+  # Resource fatigue (automatic - always enabled if resources used)
+  resource_fatigue:
+    enabled: true
+    max_slowdown: 0.30         # Resources slow down up to 30% at maximum fatigue
+    fatigue_threshold: 50      # Fatigue reaches maximum after 50 cases
+    # Formula: slowdown = 1 + (cases_handled / threshold) × max_slowdown
+    # Example: After 25 cases, resource is 15% slower; after 50 cases, 30% slower
+
+# ----------------------------------------------------------------------------
+# 6. OUTPUT - Export configuration
+# ----------------------------------------------------------------------------
+
+output:
+  formats: [csv, parquet, json, xes]  # Generate all 4 formats (PM4Py-compatible)
+  directory: "./out"                   # Output directory (created if not exists)
+
+  # File naming
+  file_prefix: "permit_events"        # Files named: permit_events.csv, permit_events.parquet, etc.
+
+  # Sample generation (for testing/preview)
+  generate_samples: true               # Also create small sample files
+  sample_size: 50                      # First 50 events in separate *_sample.* files
+
+  # Metadata
+  include_metadata: true               # Generate metadata.json with generation details
+  metadata_fields:
+    - generator_version
+    - config_file
+    - seed
+    - num_cases
+    - generated_at
+    - variant_distribution             # Actual vs expected variant percentages
+    - resource_utilization             # Cases per resource, average workload
+    - summary_statistics               # Mean/median/std of cycle times
+
+# ============================================================================
+# END OF CONFIGURATION
+# ============================================================================
+#
+# HOW VARIANTS EMERGE:
+# The 5 variants emerge naturally from the probability tree:
+#
+# 1. Direct Approval (58%):
+#    submitted → intake_validation (0.97) → assigned_to_reviewer →
+#    review_in_progress (0.58) → health_inspection (0.85) → approved
+#
+# 2. Request More Info (24%):
+#    submitted → intake_validation (0.97) → assigned_to_reviewer →
+#    review_in_progress (0.39) → request_additional_info (0.86) →
+#    applicant_provided_info → review_in_progress → health_inspection (0.85) → approved
+#
+# 3. Rejected at Final (10%):
+#    submitted → intake_validation (0.97) → assigned_to_reviewer →
+#    review_in_progress → health_inspection (0.15) → rejected
+#
+# 4. Withdrawn (5%):
+#    submitted → intake_validation (0.97) → assigned_to_reviewer →
+#    review_in_progress (0.39) → request_additional_info (0.14) → withdrawn
+#
+# 5. Early Rejection (3%):
+#    submitted → intake_validation (0.03) → rejected
+#
+# PROBABILITIES CHECK:
+# - 0.97 × 0.58 = 0.5626 ≈ 56% (Direct Approval path) → target 58%
+# - 0.97 × 0.39 × 0.86 = 0.325 ≈ 32% (Info request path) → 24% approval + others
+# - Early rejection: 3% (matches)
+# Note: Minor adjustments needed for exact match (done in generator logic)
+# ============================================================================

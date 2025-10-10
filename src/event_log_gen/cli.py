@@ -15,6 +15,7 @@ from event_log_gen import (
     export_parquet,
     export_json,
     export_xes,
+    __version__,
 )
 
 
@@ -175,6 +176,12 @@ def create_parser() -> argparse.ArgumentParser:
         prog='event-log-gen',
         description='Generate synthetic process event logs for testing and development',
         epilog='For more information, visit: https://github.com/karlromer/event-log-gen'
+    )
+
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'%(prog)s {__version__}'
     )
 
     parser.add_argument(

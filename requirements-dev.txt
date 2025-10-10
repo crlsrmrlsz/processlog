@@ -1,4 +1,9 @@
-# Development dependencies
+# Event Log Generator - Development Dependencies
+#
+# NOTE: This file is maintained for pip compatibility.
+# The canonical source of dependencies is pyproject.toml [project.optional-dependencies.dev]
+# Install with: pip install -e ".[dev]"
+
 -r requirements.txt
 
 # Testing

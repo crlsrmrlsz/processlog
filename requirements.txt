@@ -1,4 +1,9 @@
-# Production dependencies
+# Event Log Generator - Production Dependencies
+#
+# NOTE: This file is maintained for pip compatibility.
+# The canonical source of dependencies is pyproject.toml.
+# Install with: pip install -e .
+
 pyyaml>=6.0
 pandas>=2.0.0
 pyarrow>=12.0.0

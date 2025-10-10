@@ -1,0 +1,204 @@
+# High Variance Process - For Testing Anomaly Detection
+#
+# This configuration showcases a process with high variability:
+# - Multiple resource speeds and consistency levels
+# - Peak time effects (30% slower during rush hours)
+# - Random delays (5% chance of unexpected waits)
+# - Multiple process variants with different probabilities
+# - Working calendar restrictions (business hours only)
+#
+# Use this to test:
+# - Performance analysis algorithms
+# - Anomaly detection systems
+# - Resource behavior modeling
+# - Time-based pattern recognition
+
+process_name: "High Variance Loan Application"
+num_cases: 200
+seed: 123
+start_date: "2024-01-01"
+
+activities:
+  - step: 1
+    id: application_received
+    name: "Application Received"
+    type: automatic
+    duration:
+      min: 0
+      max: 0.1
+    next_steps:
+      - activity: initial_screening
+        probability: 1.0
+
+  - step: 2
+    id: initial_screening
+    name: "Initial Screening"
+    type: human
+    resource_pool: clerks
+    duration:
+      min: 0.5
+      max: 3.0  # Wide range: 30min - 3 hours
+    next_steps:
+      - activity: approved_for_review
+        probability: 0.85
+      - activity: rejected_incomplete
+        probability: 0.15
+
+  - step: 3a
+    id: approved_for_review
+    name: "Approved for Review"
+    type: automatic
+    duration:
+      min: 0
+      max: 0.05
+    next_steps:
+      - activity: credit_check
+        probability: 1.0
+
+  - step: 4
+    id: credit_check
+    name: "Credit Check"
+    type: human
+    resource_pool: analysts
+    duration:
+      typical: 2.0
+      spread: 1.5  # High variance: 0.5-3.5 hours
+    next_steps:
+      - activity: risk_assessment
+        probability: 1.0
+
+  - step: 5
+    id: risk_assessment
+    name: "Risk Assessment"
+    type: human
+    resource_pool: analysts
+    duration:
+      typical: 4.0
+      spread: 2.5  # Very high variance: 1.5-6.5 hours
+    next_steps:
+      - activity: approved
+        probability: 0.6
+      - activity: additional_review
+        probability: 0.3
+      - activity: rejected_risk
+        probability: 0.1
+
+  - step: 6
+    id: additional_review
+    name: "Additional Review Required"
+    type: human
+    resource_pool: seniors
+    duration:
+      typical: 8.0
+      spread: 4.0  # Extremely high variance: 4-12 hours
+    next_steps:
+      - activity: approved
+        probability: 0.7
+      - activity: rejected_risk
+        probability: 0.3
+
+  - step: 7a
+    id: approved
+    name: "Loan Approved"
+    type: final
+    duration:
+      min: 0
+      max: 0.1
+    next_steps: []
+
+  - step: 7b
+    id: rejected_risk
+    name: "Rejected - High Risk"
+    type: final
+    duration:
+      min: 0
+      max: 0.1
+    next_steps: []
+
+  - step: 7c
+    id: rejected_incomplete
+    name: "Rejected - Incomplete Application"
+    type: final
+    duration:
+      min: 0
+      max: 0.1
+    next_steps: []
+
+resource_pools:
+  clerks:
+    - id: clerk_fast
+      name: "Emma (Fast Clerk)"
+      speed: 1.5          # 50% faster than average
+      consistency: 0.95   # Very consistent
+      capacity: 1.0
+
+    - id: clerk_slow
+      name: "John (Slow Clerk)"
+      speed: 0.6          # 40% slower than average
+      consistency: 0.7    # Inconsistent (high variance)
+      capacity: 1.0
+
+    - id: clerk_average
+      name: "Sarah (Average Clerk)"
+      speed: 1.0
+      consistency: 0.85
+      capacity: 1.0
+
+  analysts:
+    - id: analyst_expert
+      name: "Dr. Chen (Expert)"
+      speed: 1.8          # Very fast
+      consistency: 0.98   # Extremely consistent
+      capacity: 1.0
+
+    - id: analyst_junior
+      name: "Alex (Junior)"
+      speed: 0.5          # Slow (learning)
+      consistency: 0.6    # Very inconsistent
+      capacity: 1.0
+
+    - id: analyst_standard
+      name: "Maria (Standard)"
+      speed: 1.0
+      consistency: 0.8
+      capacity: 1.0
+
+  seniors:
+    - id: senior_lead
+      name: "Director Kim"
+      speed: 1.2
+      consistency: 0.9
+      capacity: 0.5       # Part-time (causes delays)
+
+    - id: senior_manager
+      name: "Manager Patel"
+      speed: 1.0
+      consistency: 0.85
+      capacity: 1.0
+
+working_hours:
+  enabled: true
+  business_hours:
+    start: 9   # 9 AM
+    end: 17    # 5 PM
+  weekends_off: true
+  holidays:
+    - "2024-01-01"  # New Year
+    - "2024-07-04"  # Independence Day
+    - "2024-12-25"  # Christmas
+
+anomalies:
+  random_delays:
+    enabled: true
+    probability: 0.05   # 5% of activities get random delay
+    delay_hours:
+      min: 1.0
+      max: 8.0
+  peak_times:
+    enabled: true
+    slowdown_factor: 0.7  # 30% slower during peak
+    peak_hours:
+      - 10  # 10 AM
+      - 11  # 11 AM
+      - 14  # 2 PM
+      - 15  # 3 PM

@@ -1,0 +1,70 @@
+# Simple Order Processing - Minimal Example
+#
+# This is a minimal 3-activity process for testing and learning.
+# No anomalies, no calendar restrictions, straightforward flow.
+
+process_name: "Simple Order Processing"
+num_cases: 100
+seed: 42
+start_date: "2024-01-01"
+
+activities:
+  - step: 1
+    id: order_received
+    name: "Order Received"
+    type: automatic
+    duration:
+      min: 0
+      max: 0.1  # Almost instant (hours)
+    next_steps:
+      - activity: payment_validated
+        probability: 1.0
+
+  - step: 2
+    id: payment_validated
+    name: "Payment Validated"
+    type: human
+    resource_pool: clerks
+    duration:
+      min: 0.5
+      max: 2.0  # 30min to 2 hours
+    next_steps:
+      - activity: order_completed
+        probability: 0.95  # 95% success
+      - activity: order_cancelled
+        probability: 0.05  # 5% cancelled
+
+  - step: 3a
+    id: order_completed
+    name: "Order Completed"
+    type: final
+    duration:
+      min: 0
+      max: 0.1  # Instant completion
+    next_steps: []
+
+  - step: 3b
+    id: order_cancelled
+    name: "Order Cancelled"
+    type: final
+    duration:
+      min: 0
+      max: 0.1  # Instant completion
+    next_steps: []
+
+resource_pools:
+  clerks:
+    - id: clerk_01
+      name: "Alice"
+      speed: 1.0
+      consistency: 1.0
+      capacity: 1.0
+
+working_hours:
+  enabled: false  # 24/7 operations
+
+anomalies:
+  random_delays:
+    enabled: false
+  peak_times:
+    enabled: false

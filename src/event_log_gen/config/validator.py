@@ -183,15 +183,23 @@ def _validate_activities(activities: List[Dict[str, Any]], result: ValidationRes
                 result.add_error(f"Duplicate activity ID: '{activity_id}'")
             activity_ids.add(activity_id)
 
-        # Track step numbers
+        # Track step numbers (convert to int if possible)
         if 'step' in activity:
-            step_numbers.append(activity['step'])
+            step_value = activity['step']
+            if isinstance(step_value, int):
+                step_numbers.append(step_value)
+            elif isinstance(step_value, str) and step_value.isdigit():
+                step_numbers.append(int(step_value))
+            else:
+                result.add_warning(
+                    f"Activity '{activity_id}': step should be an integer, got {type(step_value).__name__}"
+                )
 
         # Validate activity type
         activity_type = activity.get('type')
-        if activity_type and activity_type not in ['human', 'automatic']:
+        if activity_type and activity_type not in ['human', 'automatic', 'final']:
             result.add_error(
-                f"Activity '{activity_id}': type must be 'human' or 'automatic', "
+                f"Activity '{activity_id}': type must be 'human', 'automatic', or 'final', "
                 f"got '{activity_type}'"
             )
 

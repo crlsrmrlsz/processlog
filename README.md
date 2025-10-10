@@ -1,69 +1,66 @@
 # Event Log Generator
 
-Synthetic process event log generator from YAML configuration with full PM4Py and XES 1849-2023 standard compatibility.
+> Generate realistic synthetic process event logs for testing and developing process mining software
 
-## Overview
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-135%20passing-success)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-80%25-green)](htmlcov/)
 
-This tool generates realistic synthetic event logs for process mining analysis. It reads a human-friendly YAML configuration file and produces event logs in multiple formats (CSV, Parquet, JSON, XES) that are directly usable by PM4Py and other process mining tools.
+## Purpose
 
-**Key Features:**
-- 🎯 **PM4Py-first design**: All exports directly importable into PM4Py without reformatting
-- 📝 **Human-centric configuration**: Self-documenting YAML with inline comments
-- 🔁 **Reproducible**: Seeded RNG ensures identical outputs for the same configuration
-- 📊 **Multiple formats**: CSV, Parquet, JSON, XES (Phase 4)
-- ⚡ **Fast**: Generate 100K+ events in seconds
-- 🧪 **Well-tested**: >80% test coverage with PM4Py compatibility tests
+Event Log Generator creates synthetic process event logs specifically designed for **developing and testing process mining software**. Whether you're building process mining tools, testing PM4Py algorithms, or validating event log processing pipelines, this tool provides realistic, customizable test data that conforms to industry standards (XES, PM4Py).
 
-## Project Status
+**Why use synthetic data?**
+- 🔒 **No privacy concerns** - Generate unlimited test data without exposing real business processes
+- 🎯 **Controlled scenarios** - Create specific edge cases, anomalies, and process variants for testing
+- 🔁 **Reproducible** - Seeded generation ensures identical outputs for regression testing
+- 📊 **Multiple formats** - Test your software's compatibility with CSV, Parquet, JSON, and XES formats
 
-**Current Phase: Phase 4 - Full Features** ✅ **COMPLETE**
+## Features
 
-- ✅ **Phase 0**: Research & documentation
-- ✅ **Phase 1**: Configuration schema & validator
-- ✅ **Phase 2**: Architecture design
-- ✅ **Phase 3**: Minimal generator (CSV export, basic features)
-- ✅ **Phase 4**: Full features (Parquet/JSON/XES, resource pools, calendars, custom attributes)
-- ⏳ **Phase 5**: CLI & packaging
-- ⏳ **Phase 6**: Final integration & sample datasets
-
-**Phase 4 Complete (2025-10-10):**
-- ✅ Core generator with seeded RNG and reproducibility
-- ✅ Activity flow (next_steps probability tree, 5 variants)
-- ✅ Resource allocation (capacity-weighted, speed/consistency profiles)
-- ✅ Working calendar (business hours 9-5, weekends, holidays)
-- ✅ Custom attributes (event-level & case-level with XES namespaces)
-- ✅ Export formats: CSV, Parquet, JSON (NDJSON), XES
-- ✅ PM4Py compatibility tests (135 tests, 80% coverage)
-- ✅ PM4Py visualization tests (DFG, Petri nets, BPMN, Process trees)
-- ✅ Visualization script (`scripts/generate_visualizations.py`)
+- **PM4Py-first design**: All exports directly importable into PM4Py without reformatting
+- **IEEE XES 1849-2023 compliant**: Standard-conformant event logs with proper namespaces
+- **Human-readable configuration**: YAML files with inline documentation
+- **Realistic process dynamics**: Resource allocation, working calendars, performance variations
+- **Custom attributes**: Add domain-specific attributes (cost, priority, locations, etc.)
+- **Process variants**: Probabilistic branching generates multiple execution paths
+- **Export formats**: CSV, Parquet, JSON (NDJSON), XES
+- **Reproducible**: Seeded RNG for deterministic testing
+- **Fast**: Generate 100K+ events in seconds
+- **Well-tested**: 135 tests, 80% coverage
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.10 or higher
-- pip package manager
-
-### Install Dependencies
+### From Source
 
 ```bash
-# Production dependencies
-pip install -r requirements.txt
+# Clone the repository
+git clone https://github.com/karlromer/event-log-gen.git
+cd event-log-gen
 
-# Development dependencies (includes testing tools)
-pip install -r requirements-dev.txt
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode
+pip install -e .
 ```
 
-**Core dependencies:**
-- `pyyaml>=6.0` - Configuration parsing
-- `pandas>=2.0.0` - DataFrame manipulation
-- `pyarrow>=12.0.0` - Parquet export (Phase 4)
-- `pm4py>=2.7.0` - XES export and validation
-- `jsonschema>=4.17.0` - Configuration validation
+### Dependencies
+
+- Python 3.10+
+- pandas >= 2.0.0
+- pyyaml >= 6.0
+- pyarrow >= 12.0.0
+- pm4py >= 2.7.0
+- jsonschema >= 4.17.0
+
+All dependencies are automatically installed with `pip install -e .`
 
 ## Quick Start
 
-### 1. Basic Usage
+### Basic Usage (Python API)
 
 ```python
 from event_log_gen import (
@@ -71,300 +68,215 @@ from event_log_gen import (
     export_csv, export_parquet, export_json, export_xes
 )
 
-# Load configuration
+# Load and validate configuration
 config = load_config('configs/process_config.yaml')
-
-# Validate configuration
 result = validate_config(config)
+
 if not result.valid:
-    print("Errors:", result.errors)
+    print("Configuration errors:", result.errors)
     exit(1)
 
-# Generate event log
+# Generate 1000 cases with reproducible seed
 df = generate_log(config, seed=42, num_cases=1000)
 
-# Export to multiple formats (all PM4Py-compatible)
+# Export to PM4Py-compatible formats
 export_csv(df, 'output/events.csv')
 export_parquet(df, 'output/events.parquet')
 export_json(df, 'output/events.json')
 export_xes(df, 'output/events.xes')
+
+print(f"Generated {len(df)} events across {df['case_id'].nunique()} cases")
 ```
 
-### 2. Run Example
+### Run the Example
 
 ```bash
 python examples/basic_usage.py
 ```
 
-This will:
-1. Load `configs/process_config.yaml`
-2. Validate the configuration
-3. Generate 10 cases
-4. Export to `output/events_example.csv`
-5. Display summary statistics
+This generates a small event log (10 cases) from the restaurant permit process and displays statistics.
 
-### 3. Generate PM4Py Visualizations
-
-```bash
-# Install Graphviz first (system package required)
-sudo apt-get install graphviz  # Ubuntu/Debian
-# brew install graphviz          # macOS
-
-# Run visualization script
-./scripts/run_visualizations.sh
-
-# Or run directly with Python
-source venv/bin/activate
-python3 scripts/generate_visualizations.py
-```
-
-Generates 6 PNG visualizations in `visualizations/` folder:
-- DFG (frequency & performance)
-- Petri nets (Inductive & Alpha miners)
-- Process tree
-- BPMN diagram
-
-See `scripts/README.md` for details.
-
-## Configuration
-
-### Structure
-
-Event logs are configured using YAML files with the following sections:
-
-```yaml
-# Process metadata
-process_name: "Your Process Name"
-num_cases: 1000
-seed: 42
-start_date: "2024-01-01"
-
-# Activities (chronological order)
-activities:
-  - step: 1
-    id: start
-    name: "Start Activity"
-    type: automatic  # or "human"
-    duration:
-      min: 0  # hours
-      max: 1
-    next_steps:
-      - activity: next_activity
-        probability: 1.0
-
-# Resource pools (for human activities)
-resource_pools:
-  clerks:
-    - id: clerk_001
-      name: "Alice"
-      speed: 0.8        # 20% faster than average
-      consistency: 0.9  # Low variance
-      capacity: 1.0     # Standard capacity
-```
-
-### Example Configuration
-
-See `configs/process_config.yaml` for a complete example modeling a restaurant permit application process with:
-- 10 activities
-- 5 process variants (Direct Approval 58%, Request More Info 24%, etc.)
-- 3 resource pools (10 resources total)
-- Anomaly knobs (random delays, peak times)
-
-## Project Structure
-
-```
-event-log-gen/
-├── configs/                    # Configuration examples
-│   └── process_config.yaml    # Full example (628 lines, self-documenting)
-├── docs/                       # Documentation
-│   ├── ARCHITECTURE.md        # System architecture (1000+ lines)
-│   ├── research_summary.md    # PM4Py/XES research & design
-│   └── PROCESS_DEFINITION.md  # Original process specification
-├── src/event_log_gen/         # Source code
-│   ├── config/                # Configuration loading & validation
-│   │   ├── loader.py          # YAML config loader
-│   │   └── validator.py       # Schema & semantic validation
-│   ├── core/                  # Event generation logic
-│   │   └── generator.py       # Main generator (resource allocation, calendar)
-│   └── exporters/             # Export formats
-│       ├── csv_exporter.py    # PM4Py-compatible CSV
-│       ├── parquet_exporter.py # Parquet export
-│       ├── json_exporter.py   # JSON/NDJSON export
-│       └── xes_exporter.py    # XES export via PM4Py
-├── tests/                      # Test suite (135 tests, 80% coverage)
-│   ├── test_config/           # Configuration tests
-│   ├── test_core/             # Generator tests
-│   ├── test_exporters/        # Exporter tests
-│   ├── test_pm4py_compatibility.py  # PM4Py format tests
-│   └── test_pm4py_visualization.py  # PM4Py discovery tests
-├── scripts/                    # Utility scripts
-│   ├── generate_visualizations.py   # PM4Py visualization generator
-│   ├── run_visualizations.sh        # Wrapper with dependency checks
-│   └── README.md              # Script documentation
-├── examples/                   # Usage examples
-│   └── basic_usage.py
-├── output/                     # Generated event logs (gitignored)
-└── visualizations/            # Generated PNG files (gitignored)
-```
-
-## Testing
-
-### Run All Tests
-
-```bash
-pytest tests/ -v
-```
-
-### Run Specific Test Modules
-
-```bash
-# Configuration tests
-pytest tests/test_config/ -v
-
-# Generator tests
-pytest tests/test_core/ -v
-
-# CSV exporter tests
-pytest tests/test_exporters/ -v
-```
-
-### Test Coverage
-
-```bash
-pytest tests/ --cov=event_log_gen --cov-report=html
-```
-
-View coverage report: `open htmlcov/index.html`
-
-## PM4Py Compatibility
-
-All exported logs are PM4Py-compatible:
-
-### Column Names
-
-| Internal Name | PM4Py/XES Name | Description |
-|--------------|----------------|-------------|
-| `case_id` | `case:concept:name` | Case identifier |
-| `activity` | `concept:name` | Activity name |
-| `timestamp` | `time:timestamp` | Event timestamp |
-| `resource` | `org:resource` | Resource (person/system) |
-| `lifecycle` | `lifecycle:transition` | Lifecycle state |
-
-Custom attributes (e.g., `org:department`, `cost:amount`) are preserved with their namespace prefixes.
-
-### PM4Py Usage
+### Test with PM4Py
 
 ```python
 import pm4py
 
-# Import generated CSV
+# Load generated event log
 df = pm4py.read_csv('output/events.csv')
 log = pm4py.convert_to_event_log(df)
 
 # Discover process model
 dfg, start_activities, end_activities = pm4py.discover_dfg(log)
 
-# Filter log
-from pm4py.algo.filtering.log.variants import variants_filter
-filtered_log = variants_filter.apply(log)
+# Generate visualization (requires Graphviz)
+pm4py.view_dfg(dfg, start_activities, end_activities)
 ```
 
-## Configuration Validation
+## Configuration
 
-The validator checks:
+Event logs are defined using self-documenting YAML files. Here's a minimal example:
 
-✅ **Schema validation**: Required fields, types, structure
-✅ **Probability validation**: next_steps probabilities sum to 1.0 (±0.001)
-✅ **Duration validation**: min/max OR typical/spread (mutually exclusive)
-✅ **Cross-references**: Activity IDs, resource pools exist
-✅ **Semantic constraints**: min < max, probabilities 0-1, values > 0
+```yaml
+process_name: "Order Fulfillment"
+num_cases: 100
+seed: 42
+start_date: "2024-01-01"
 
-Example:
+activities:
+  - step: 1
+    id: order_received
+    name: "Order Received"
+    type: automatic
+    duration: {min: 0, max: 0.1}  # hours
+    next_steps:
+      - activity: payment_check
+        probability: 1.0
 
-```python
-from event_log_gen import load_config, validate_config
+  - step: 2
+    id: payment_check
+    name: "Payment Validation"
+    type: human
+    resource_pool: clerks
+    duration: {min: 0.5, max: 2.0}
+    next_steps:
+      - activity: approved
+        probability: 0.95
+      - activity: rejected
+        probability: 0.05
 
-config = load_config('configs/process_config.yaml')
-result = validate_config(config)
-
-if result.valid:
-    print("✓ Valid")
-else:
-    print("✗ Errors:")
-    for error in result.errors:
-        print(f"  - {error}")
-
-if result.warnings:
-    print("⚠ Warnings:")
-    for warning in result.warnings:
-        print(f"  - {warning}")
+resource_pools:
+  clerks:
+    - id: clerk_01
+      name: "Alice"
+      speed: 1.0      # Normal speed
+      consistency: 0.9  # Low variance
+      capacity: 1.0   # Standard workload
 ```
 
-## Roadmap
+### Example Configuration
 
-### ✅ Phase 4: Full Features (COMPLETE)
-- [x] Parquet exporter (`pyarrow`)
-- [x] JSON/NDJSON exporter
-- [x] XES exporter (via `pm4py.write_xes`)
-- [x] Full resource allocation (pools, performance profiles)
-- [x] Working hours/calendar logic
-- [x] Custom attributes (event & case level)
-- [x] PM4Py compatibility tests (135 tests)
-- [x] PM4Py visualization tests (DFG, Petri nets, BPMN, Process trees)
-- [x] Visualization generation script
+See [`configs/process_config.yaml`](configs/process_config.yaml) for a complete example of a restaurant permit process with:
+- 10 activities with probabilistic branching
+- 5 process variants (approval, rejection, withdrawal, etc.)
+- 3 resource pools with 10 workers
+- Working calendar (business hours, weekends, holidays)
+- Custom attributes (cost, priority, location)
 
-### Phase 5: CLI & Packaging (Next)
-- [ ] Command-line interface with argparse
-- [ ] Comprehensive user documentation
-- [ ] Example configurations (baseline vs anomaly scenarios)
-- [ ] Installation via pip (PyPI package)
+## Use Cases
 
-### Phase 6: Final Integration
-- [ ] Sample datasets (50 events each format)
-- [ ] Full PM4Py workflow tests (import → discover → filter → export)
-- [ ] Performance optimization (>100K cases)
-- [ ] Production release (v1.0.0)
+### For Process Mining Tool Developers
+- Test your software with realistic event logs before accessing real data
+- Generate edge cases and anomalies for robust error handling
+- Benchmark performance with large datasets (100K+ events)
+- Validate PM4Py compatibility and XES standard conformance
+
+### For Researchers
+- Create reproducible datasets for academic papers
+- Test process discovery algorithms with known ground truth
+- Compare algorithm performance across different process structures
+- Generate baseline and anomaly scenarios for evaluation
+
+### For Software Testers
+- Generate regression test datasets with fixed seeds
+- Create integration test data for process mining pipelines
+- Test data format conversions (CSV ↔ Parquet ↔ JSON ↔ XES)
+- Validate event log validators and quality checkers
+
+## PM4Py & XES Compatibility
+
+All generated event logs are **directly importable** into PM4Py without any preprocessing or column renaming.
+
+### Supported Formats
+
+| Format | Extension | PM4Py Function | IEEE XES Standard |
+|--------|-----------|----------------|-------------------|
+| CSV | `.csv` | `pm4py.read_csv()` | Column names compliant |
+| Parquet | `.parquet` | Load with pandas → PM4Py | Column names compliant |
+| JSON | `.json` | Load with pandas → PM4Py | NDJSON format |
+| XES | `.xes` | `pm4py.read_xes()` | IEEE 1849-2023 ✓ |
+
+### XES Standard Attributes
+
+| Internal | XES/PM4Py Name | Type |
+|----------|----------------|------|
+| `case_id` | `case:concept:name` | String |
+| `activity` | `concept:name` | String |
+| `timestamp` | `time:timestamp` | Timestamp |
+| `resource` | `org:resource` | String |
+| `lifecycle` | `lifecycle:transition` | String |
+
+Custom attributes use proper XES namespaces (e.g., `cost:amount`, `org:department`, `case:priority`).
+
+### Tested PM4Py Functions
+
+✅ **Import/Export**: `read_csv()`, `read_xes()`, `write_xes()`, `convert_to_event_log()`
+✅ **Discovery**: `discover_dfg()`, `discover_petri_net_inductive()`, `discover_petri_net_alpha()`
+✅ **Models**: DFG, Petri nets, Process trees, BPMN diagrams
+✅ **Statistics**: `get_start_activities()`, `get_end_activities()`, variant analysis
+
+See [test suite](tests/) for complete PM4Py compatibility validation.
+
+## Development & Testing
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Generate coverage report
+pytest tests/ --cov=event_log_gen --cov-report=html
+
+# Validate a configuration
+python -c "from event_log_gen import load_config, validate_config; \
+           result = validate_config(load_config('configs/process_config.yaml')); \
+           print('Valid!' if result.valid else result.errors)"
+```
 
 ## Documentation
 
-- **Architecture**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - Complete system design
-- **Research**: [`docs/research_summary.md`](docs/research_summary.md) - PM4Py/XES research & design philosophy
-- **Configuration**: [`configs/README.md`](configs/README.md) - Configuration guide
-- **Process Spec**: [`docs/PROCESS_DEFINITION.md`](docs/PROCESS_DEFINITION.md) - Example process definition
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - System design and module structure
+- [`docs/research_summary.md`](docs/research_summary.md) - PM4Py/XES research and design philosophy
+- [`docs/PROCESS_DEFINITION.md`](docs/PROCESS_DEFINITION.md) - Example process specification
+- [`configs/process_config.yaml`](configs/process_config.yaml) - Annotated configuration example
 
 ## Contributing
 
-This project follows a phased development approach. Currently accepting:
-- Bug reports for Phase 1-3 features
-- Documentation improvements
-- Test coverage enhancements
+Contributions are welcome! This project is designed to help the process mining community develop and test their software.
 
-Please wait for Phase 6 completion before submitting feature requests.
+**Ways to contribute:**
+- 🐛 Report bugs or issues
+- 📝 Improve documentation
+- ✨ Add new example configurations
+- 🧪 Expand test coverage
+- 🔧 Suggest new features
+
+Please open an issue first to discuss significant changes.
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License - see [LICENSE](LICENSE) file for details.
+
+This project is free and open-source software designed to support process mining research and development.
 
 ## Citation
 
-If you use this tool in research, please cite:
+If you use this tool in academic research, please cite:
 
 ```bibtex
-@software{event_log_generator,
-  title = {Event Log Generator: Synthetic Process Event Logs from YAML},
-  author = {Your Name},
+@software{event_log_generator_2024,
+  title = {Event Log Generator: Synthetic Process Event Logs for Testing},
+  author = {Romer, Karl},
   year = {2024},
-  version = {0.1.0},
-  url = {https://github.com/yourusername/event-log-gen}
+  url = {https://github.com/karlromer/event-log-gen},
+  note = {Process mining test data generator with PM4Py and XES compatibility}
 }
 ```
 
 ## Acknowledgments
 
-- **PM4Py**: Process mining framework ([pm4py.org](https://pm4py.org))
-- **IEEE XES Standard 1849-2023**: Event log format ([xes-standard.org](https://www.xes-standard.org))
-- **Anthropic Claude**: AI assistance for development
+- **PM4Py** - Process Mining for Python ([pm4py.org](https://pm4py.org))
+- **IEEE XES Standard** - eXtensible Event Stream format ([xes-standard.org](https://www.xes-standard.org))
+- **Process Mining Community** - For advancing the field of process analytics
 
 ---
 
-**Status**: Phase 4 (Full Features) ✅ COMPLETE - All core features implemented, 135 tests passing, 80% coverage
+**Version**: 0.5.0-beta | **Status**: Active Development | **License**: MIT

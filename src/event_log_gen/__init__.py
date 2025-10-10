@@ -5,7 +5,7 @@ This package provides tools to generate realistic synthetic event logs for proce
 analysis, with full PM4Py and XES 1849-2023 standard compatibility.
 """
 
-__version__ = "0.5.0"
+__version__ = "1.0.0"
 __author__ = "Karl Romer"
 
 from event_log_gen.config.loader import load_config

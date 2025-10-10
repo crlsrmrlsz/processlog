@@ -60,7 +60,26 @@ All dependencies are automatically installed with `pip install -e .`
 
 ## Quick Start
 
-### Basic Usage (Python API)
+### CLI Usage (Recommended)
+
+```bash
+# Generate event logs (all formats)
+event-log-gen generate -c configs/process_config.yaml -n 1000
+
+# Generate only CSV format
+event-log-gen generate -c configs/process_config.yaml -n 100 -f csv -o output/
+
+# Validate configuration
+event-log-gen validate -c configs/process_config.yaml
+
+# View process information
+event-log-gen info -c configs/process_config.yaml
+
+# Generate with custom seed
+event-log-gen generate -c configs/process_config.yaml -s 123 -n 500
+```
+
+### Python API Usage
 
 ```python
 from event_log_gen import (
@@ -279,4 +298,4 @@ If you use this tool in academic research, please cite:
 
 ---
 
-**Version**: 0.5.0-beta | **Status**: Active Development | **License**: MIT
+**Version**: 1.0.0 | **Status**: Production/Stable | **License**: MIT

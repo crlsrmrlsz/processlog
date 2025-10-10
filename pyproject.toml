@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "event-log-gen"
-version = "0.5.0"
+version = "1.0.0"
 description = "Generate realistic synthetic process event logs for testing and developing process mining software"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["process-mining", "event-log", "synthetic-data", "pm4py", "xes", "testing"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Topic :: Software Development :: Testing",

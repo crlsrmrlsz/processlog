@@ -1,4 +1,4 @@
-# Event Log Generator
+# ProcessLog
 
 > Generate realistic synthetic process event logs for testing and developing process mining software
 
@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Event Log Generator creates synthetic process event logs specifically designed for **developing and testing process mining software**. Whether you're building process mining tools, testing PM4Py algorithms, or validating event log processing pipelines, this tool provides realistic, customizable test data that conforms to industry standards (XES, PM4Py).
+ProcessLog creates synthetic process event logs specifically designed for **developing and testing process mining software**. Whether you're building process mining tools, testing PM4Py algorithms, or validating event log processing pipelines, this tool provides realistic, customizable test data that conforms to industry standards (XES, PM4Py).
 
 **Why use synthetic data?**
 - 🔒 **No privacy concerns** - Generate unlimited test data without exposing real business processes
@@ -334,8 +334,8 @@ This project is free and open-source software designed to support process mining
 If you use this tool in academic research, please cite:
 
 ```bibtex
-@software{processlogerator_2024,
-  title = {Event Log Generator: Synthetic Process Event Logs for Testing},
+@software{processlog_2024,
+  title = {ProcessLog: Synthetic Process Event Logs for Testing},
   author = {Romer, Karl},
   year = {2024},
   url = {https://github.com/crlsrmrlsz/processlog},

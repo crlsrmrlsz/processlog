@@ -39,8 +39,8 @@ def export_csv(df: pd.DataFrame, output_path: str | Path, include_header: bool =
         ExportError: If export fails
 
     Example:
-        >>> from event_log_gen.core.generator import generate_log
-        >>> from event_log_gen.config import load_config
+        >>> from processlog.core.generator import generate_log
+        >>> from processlog.config import load_config
         >>> config = load_config('configs/process_config.yaml')
         >>> df = generate_log(config, seed=42, num_cases=10)
         >>> export_csv(df, 'output/events.csv')

@@ -50,4 +50,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[1.0.0]: https://github.com/crlsrmrlsz/event-log-gen/releases/tag/v1.0.0
+[1.0.0]: https://github.com/crlsrmrlsz/processlog/releases/tag/v1.0.0

@@ -9,8 +9,8 @@ from pathlib import Path
 from datetime import datetime
 import tempfile
 
-from event_log_gen.exporters.xes_exporter import export_xes
-from event_log_gen.exporters.csv_exporter import ExportError
+from processlog.exporters.xes_exporter import export_xes
+from processlog.exporters.csv_exporter import ExportError
 
 
 class TestExportXes:

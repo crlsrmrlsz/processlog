@@ -19,11 +19,11 @@ from pathlib import Path
 import tempfile
 import os
 
-from event_log_gen import load_config, generate_log
-from event_log_gen.exporters.csv_exporter import export_csv
-from event_log_gen.exporters.parquet_exporter import export_parquet
-from event_log_gen.exporters.json_exporter import export_json
-from event_log_gen.exporters.xes_exporter import export_xes
+from processlog import load_config, generate_log
+from processlog.exporters.csv_exporter import export_csv
+from processlog.exporters.parquet_exporter import export_parquet
+from processlog.exporters.json_exporter import export_json
+from processlog.exporters.xes_exporter import export_xes
 
 
 @pytest.fixture

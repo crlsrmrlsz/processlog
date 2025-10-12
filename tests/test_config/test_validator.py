@@ -4,8 +4,8 @@ Tests for configuration validator module
 
 import pytest
 
-from event_log_gen.config.loader import parse_yaml
-from event_log_gen.config.validator import (
+from processlog.config.loader import parse_yaml
+from processlog.config.validator import (
     validate_config,
     ValidationResult,
 )

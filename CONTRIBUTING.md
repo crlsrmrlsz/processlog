@@ -41,8 +41,8 @@ Thank you for your interest in contributing to Event Log Generator! This project
 
 ```bash
 # Clone the repository
-git clone https://github.com/crlsrmrlsz/event-log-gen.git
-cd event-log-gen
+git clone https://github.com/crlsrmrlsz/processlog.git
+cd processlog
 
 # Create virtual environment
 python3 -m venv venv
@@ -59,7 +59,7 @@ pip install -e ".[dev]"
 pytest tests/ -v
 
 # Run with coverage
-pytest tests/ --cov=event_log_gen --cov-report=html
+pytest tests/ --cov=processlog --cov-report=html
 
 # Run specific test file
 pytest tests/test_core/test_generator.py -v
@@ -90,8 +90,8 @@ flake8 src/ tests/
 ```bash
 # Fork the repository on GitHub
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/event-log-gen.git
-cd event-log-gen
+git clone https://github.com/YOUR_USERNAME/processlog.git
+cd processlog
 
 # Create a feature branch
 git checkout -b feature/your-feature-name
@@ -109,8 +109,8 @@ git checkout -b feature/your-feature-name
 pytest tests/ -v
 
 # Verify CLI still works
-event-log-gen validate -c configs/process_config.yaml
-event-log-gen generate -c configs/process_config.yaml -n 10 -f csv
+processlog validate -c configs/process_config.yaml
+processlog generate -c configs/process_config.yaml -n 10 -f csv
 ```
 
 ### 4. Commit Guidelines
@@ -202,8 +202,8 @@ When adding example configurations:
 ## Project Structure
 
 ```
-event-log-gen/
-├── src/event_log_gen/       # Main package
+processlog/
+├── src/processlog/       # Main package
 │   ├── config/              # Configuration loading and validation
 │   ├── core/                # Event generation engine
 │   ├── exporters/           # Format exporters (CSV, Parquet, JSON, XES)

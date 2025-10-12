@@ -9,8 +9,8 @@ from pathlib import Path
 from datetime import datetime
 import tempfile
 
-from event_log_gen.exporters.json_exporter import export_json
-from event_log_gen.exporters.csv_exporter import ExportError
+from processlog.exporters.json_exporter import export_json
+from processlog.exporters.csv_exporter import ExportError
 
 
 class TestExportJson:

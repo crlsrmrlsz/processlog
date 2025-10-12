@@ -10,9 +10,9 @@ import pandas as pd
 import tempfile
 from pathlib import Path
 
-from event_log_gen.config import parse_yaml
-from event_log_gen.core.generator import generate_log
-from event_log_gen.exporters.csv_exporter import export_csv
+from processlog.config import parse_yaml
+from processlog.core.generator import generate_log
+from processlog.exporters.csv_exporter import export_csv
 
 
 class TestPM4PyDFGVisualization:

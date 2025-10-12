@@ -6,8 +6,8 @@ import pytest
 import pandas as pd
 from datetime import datetime
 
-from event_log_gen.config.loader import parse_yaml
-from event_log_gen.core.generator import (
+from processlog.config.loader import parse_yaml
+from processlog.core.generator import (
     Event,
     GenerationError,
     generate_log,

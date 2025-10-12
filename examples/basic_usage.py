@@ -9,7 +9,7 @@ This example demonstrates the complete workflow:
 """
 
 from pathlib import Path
-from event_log_gen import load_config, validate_config, generate_log, export_csv
+from processlog import load_config, validate_config, generate_log, export_csv
 
 
 def main():

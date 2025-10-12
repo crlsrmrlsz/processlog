@@ -90,7 +90,7 @@ def generate_log(
         GenerationError: If generation fails
 
     Example:
-        >>> from event_log_gen.config import load_config, validate_config
+        >>> from processlog.config import load_config, validate_config
         >>> config = load_config('configs/process_config.yaml')
         >>> result = validate_config(config)
         >>> if result.valid:

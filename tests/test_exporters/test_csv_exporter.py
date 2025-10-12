@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 import tempfile
 
-from event_log_gen.exporters.csv_exporter import (
+from processlog.exporters.csv_exporter import (
     export_csv,
     ExportError,
     get_pm4py_column_names,

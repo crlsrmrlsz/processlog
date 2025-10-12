@@ -6,7 +6,7 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from event_log_gen.config.loader import (
+from processlog.config.loader import (
     load_config,
     parse_yaml,
     ConfigurationError,

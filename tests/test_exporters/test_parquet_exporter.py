@@ -8,8 +8,8 @@ from pathlib import Path
 from datetime import datetime
 import tempfile
 
-from event_log_gen.exporters.parquet_exporter import export_parquet
-from event_log_gen.exporters.csv_exporter import ExportError
+from processlog.exporters.parquet_exporter import export_parquet
+from processlog.exporters.csv_exporter import ExportError
 
 
 class TestExportParquet:

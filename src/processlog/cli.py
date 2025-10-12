@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from event_log_gen import (
+from processlog import (
     load_config,
     validate_config,
     generate_log,
@@ -19,7 +19,7 @@ from event_log_gen import (
     export_metadata,
     __version__,
 )
-from event_log_gen.utils.naming import (
+from processlog.utils.naming import (
     generate_run_name,
     create_output_path,
     get_git_commit,
@@ -230,9 +230,9 @@ def cmd_info(args: argparse.Namespace) -> int:
 def create_parser() -> argparse.ArgumentParser:
     """Create argument parser"""
     parser = argparse.ArgumentParser(
-        prog='event-log-gen',
+        prog='processlog',
         description='Generate synthetic process event logs for testing and development',
-        epilog='For more information, visit: https://github.com/crlsrmrlsz/event-log-gen'
+        epilog='For more information, visit: https://github.com/crlsrmrlsz/processlog'
     )
 
     parser.add_argument(

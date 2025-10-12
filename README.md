@@ -35,8 +35,8 @@ Event Log Generator creates synthetic process event logs specifically designed f
 
 ```bash
 # Clone the repository
-git clone https://github.com/crlsrmrlsz/event-log-gen.git
-cd event-log-gen
+git clone https://github.com/crlsrmrlsz/processlog.git
+cd processlog
 
 # Create virtual environment (recommended)
 python3 -m venv venv
@@ -63,31 +63,31 @@ All dependencies are automatically installed with `pip install -e .`
 
 ```bash
 # Generate event logs (timestamped run folder, all formats)
-event-log-gen generate -c configs/process_config.yaml -n 1000
+processlog generate -c configs/process_config.yaml -n 1000
 
 # Generate with custom run name
-event-log-gen generate -c configs/process_config.yaml -n 1000 --run-name experiment_v2
+processlog generate -c configs/process_config.yaml -n 1000 --run-name experiment_v2
 
 # Generate only CSV format to specific folder (backward compatible)
-event-log-gen generate -c configs/process_config.yaml -n 100 -f csv -o output/
+processlog generate -c configs/process_config.yaml -n 100 -f csv -o output/
 
 # Generate without timestamps (flat output for CI/CD)
-event-log-gen generate -c configs/process_config.yaml -n 100 --no-timestamp
+processlog generate -c configs/process_config.yaml -n 100 --no-timestamp
 
 # Validate configuration
-event-log-gen validate -c configs/process_config.yaml
+processlog validate -c configs/process_config.yaml
 
 # View process information
-event-log-gen info -c configs/process_config.yaml
+processlog info -c configs/process_config.yaml
 
 # Generate with custom seed
-event-log-gen generate -c configs/process_config.yaml -s 123 -n 500
+processlog generate -c configs/process_config.yaml -s 123 -n 500
 ```
 
 ### Python API Usage
 
 ```python
-from event_log_gen import (
+from processlog import (
     load_config, validate_config, generate_log,
     export_csv, export_parquet, export_json, export_xes
 )
@@ -225,7 +225,7 @@ output/
   "activity_distribution": {...},
   "resource_utilization": {...},
   "git_commit": "903aab0",
-  "cli_command": "event-log-gen generate ..."
+  "cli_command": "processlog generate ..."
 }
 ```
 
@@ -296,10 +296,10 @@ See [test suite](tests/) for complete PM4Py compatibility validation.
 pytest tests/ -v
 
 # Generate coverage report
-pytest tests/ --cov=event_log_gen --cov-report=html
+pytest tests/ --cov=processlog --cov-report=html
 
 # Validate a configuration
-python -c "from event_log_gen import load_config, validate_config; \
+python -c "from processlog import load_config, validate_config; \
            result = validate_config(load_config('configs/process_config.yaml')); \
            print('Valid!' if result.valid else result.errors)"
 ```
@@ -334,11 +334,11 @@ This project is free and open-source software designed to support process mining
 If you use this tool in academic research, please cite:
 
 ```bibtex
-@software{event_log_generator_2024,
+@software{processlogerator_2024,
   title = {Event Log Generator: Synthetic Process Event Logs for Testing},
   author = {Romer, Karl},
   year = {2024},
-  url = {https://github.com/crlsrmrlsz/event-log-gen},
+  url = {https://github.com/crlsrmrlsz/processlog},
   note = {Process mining test data generator with PM4Py and XES compatibility}
 }
 ```

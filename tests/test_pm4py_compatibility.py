@@ -10,11 +10,11 @@ import pandas as pd
 import tempfile
 from pathlib import Path
 
-from event_log_gen.config import load_config, validate_config, parse_yaml
-from event_log_gen.core.generator import generate_log
-from event_log_gen.exporters.csv_exporter import export_csv
-from event_log_gen.exporters.parquet_exporter import export_parquet
-from event_log_gen.exporters.json_exporter import export_json
+from processlog.config import load_config, validate_config, parse_yaml
+from processlog.core.generator import generate_log
+from processlog.exporters.csv_exporter import export_csv
+from processlog.exporters.parquet_exporter import export_parquet
+from processlog.exporters.json_exporter import export_json
 
 
 class TestPM4PyImport:

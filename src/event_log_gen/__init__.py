@@ -15,6 +15,7 @@ from event_log_gen.exporters.csv_exporter import export_csv
 from event_log_gen.exporters.parquet_exporter import export_parquet
 from event_log_gen.exporters.json_exporter import export_json
 from event_log_gen.exporters.xes_exporter import export_xes
+from event_log_gen.exporters.metadata import export_metadata
 
 __all__ = [
     "load_config",
@@ -24,5 +25,6 @@ __all__ = [
     "export_parquet",
     "export_json",
     "export_xes",
+    "export_metadata",
     "__version__",
 ]

@@ -188,11 +188,15 @@ def _validate_activities(activities: List[Dict[str, Any]], result: ValidationRes
             step_value = activity['step']
             if isinstance(step_value, int):
                 step_numbers.append(step_value)
-            elif isinstance(step_value, str) and step_value.isdigit():
-                step_numbers.append(int(step_value))
+            elif isinstance(step_value, str):
+                # Accept string step values (e.g., "5a", "7b" for parallel/variant steps)
+                # Only track numeric-only strings for sequence validation
+                if step_value.isdigit():
+                    step_numbers.append(int(step_value))
+                # No warning for non-numeric strings - they're valid for documentation
             else:
                 result.add_warning(
-                    f"Activity '{activity_id}': step should be an integer, got {type(step_value).__name__}"
+                    f"Activity '{activity_id}': step should be an integer or string, got {type(step_value).__name__}"
                 )
 
         # Validate activity type

@@ -73,3 +73,6 @@ Thumbs.db
 
 # Project-specific (local only)
 docs/prompt0.md
+CLAUDE.md
+.claude/
+TODO.md

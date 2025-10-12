@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Karl Romer", email = "karlromer.dev@gmail.com"}
+    {name = "Karl Romer", email = "crlsrmrlsz@gmail.com"}
 ]
 keywords = ["process-mining", "event-log", "synthetic-data", "pm4py", "xes", "testing"]
 classifiers = [
@@ -50,10 +50,10 @@ dev = [
 event-log-gen = "event_log_gen.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/karlromer/event-log-gen"
-Documentation = "https://github.com/karlromer/event-log-gen/blob/main/README.md"
-Repository = "https://github.com/karlromer/event-log-gen"
-Issues = "https://github.com/karlromer/event-log-gen/issues"
+Homepage = "https://github.com/crlsrmrlsz/event-log-gen"
+Documentation = "https://github.com/crlsrmrlsz/event-log-gen/blob/main/README.md"
+Repository = "https://github.com/crlsrmrlsz/event-log-gen"
+Issues = "https://github.com/crlsrmrlsz/event-log-gen/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

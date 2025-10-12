@@ -65,7 +65,12 @@ class GenerationError(Exception):
     pass
 
 
-def generate_log(config: ConfigDict, seed: int | None = None, num_cases: int | None = None) -> pd.DataFrame:
+def generate_log(
+    config: ConfigDict,
+    seed: int | None = None,
+    num_cases: int | None = None,
+    return_metadata: bool = False
+) -> pd.DataFrame | tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Generate complete event log from configuration
 
@@ -75,9 +80,11 @@ def generate_log(config: ConfigDict, seed: int | None = None, num_cases: int | N
         config: Validated configuration dictionary
         seed: Random seed for reproducibility (overrides config if provided)
         num_cases: Number of cases to generate (overrides config if provided)
+        return_metadata: If True, return (dataframe, metadata) tuple
 
     Returns:
-        DataFrame with internal schema (case_id, activity, timestamp, resource, lifecycle, ...)
+        If return_metadata=False: DataFrame with internal schema
+        If return_metadata=True: Tuple of (DataFrame, metadata dict)
 
     Raises:
         GenerationError: If generation fails
@@ -87,7 +94,7 @@ def generate_log(config: ConfigDict, seed: int | None = None, num_cases: int | N
         >>> config = load_config('configs/process_config.yaml')
         >>> result = validate_config(config)
         >>> if result.valid:
-        ...     df = generate_log(config, seed=42, num_cases=100)
+        ...     df, metadata = generate_log(config, seed=42, num_cases=100, return_metadata=True)
         ...     print(f"Generated {len(df)} events for {df['case_id'].nunique()} cases")
     """
     # Use config values if not overridden
@@ -95,6 +102,9 @@ def generate_log(config: ConfigDict, seed: int | None = None, num_cases: int | N
         seed = config.get("seed", 42)
     if num_cases is None:
         num_cases = config.get("num_cases", 100)
+
+    # Track generation start time
+    generation_start = datetime.now()
 
     # Initialize seeded RNG
     rng = random.Random(seed)
@@ -125,6 +135,20 @@ def generate_log(config: ConfigDict, seed: int | None = None, num_cases: int | N
 
     # Convert to DataFrame
     df = _events_to_dataframe(all_events)
+
+    # Build metadata if requested
+    if return_metadata:
+        generation_end = datetime.now()
+        metadata = _build_metadata(
+            config=config,
+            df=df,
+            seed=seed,
+            num_cases=num_cases,
+            generation_start=generation_start,
+            generation_end=generation_end,
+            resource_tracker=resource_tracker
+        )
+        return df, metadata
 
     return df
 
@@ -694,3 +718,84 @@ def _generate_event_attributes(activity_type: str, config: ConfigDict, rng: rand
             event_attrs[attr_name] = value
 
     return event_attrs
+
+
+# ============================================================================
+# Metadata Generation
+# ============================================================================
+
+def _build_metadata(
+    config: ConfigDict,
+    df: pd.DataFrame,
+    seed: int,
+    num_cases: int,
+    generation_start: datetime,
+    generation_end: datetime,
+    resource_tracker: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Build comprehensive metadata about the generated event log
+
+    Args:
+        config: Configuration dictionary
+        df: Generated event log dataframe
+        seed: Random seed used
+        num_cases: Number of cases generated
+        generation_start: Generation start timestamp
+        generation_end: Generation end timestamp
+        resource_tracker: Resource tracking data
+
+    Returns:
+        Metadata dictionary
+
+    Example metadata structure:
+        {
+            "generation": {...},
+            "process": {...},
+            "statistics": {...},
+            "resource_utilization": {...}
+        }
+    """
+    from .. import __version__
+
+    # Generation metadata
+    generation_duration = (generation_end - generation_start).total_seconds()
+
+    metadata = {
+        "generator_version": __version__,
+        "generated_at": generation_end.isoformat(),
+        "generation_duration_seconds": round(generation_duration, 2),
+        "seed": seed,
+        "process_name": config.get("process_name", "Unnamed Process"),
+        "num_cases": num_cases,
+        "num_events": len(df),
+        "start_date": config.get("start_date"),
+        "end_date": config.get("end_date"),
+        "timezone": config.get("timezone", "UTC"),
+    }
+
+    # Statistics
+    if not df.empty:
+        # Calculate cycle times (first to last event per case)
+        case_times = df.groupby('case_id')['timestamp'].agg(['min', 'max'])
+        case_times['duration_hours'] = (case_times['max'] - case_times['min']).dt.total_seconds() / 3600
+
+        metadata["statistics"] = {
+            "mean_cycle_time_hours": round(case_times['duration_hours'].mean(), 2),
+            "median_cycle_time_hours": round(case_times['duration_hours'].median(), 2),
+            "min_cycle_time_hours": round(case_times['duration_hours'].min(), 2),
+            "max_cycle_time_hours": round(case_times['duration_hours'].max(), 2),
+            "std_cycle_time_hours": round(case_times['duration_hours'].std(), 2),
+            "mean_events_per_case": round(df.groupby('case_id').size().mean(), 2),
+        }
+
+        # Activity distribution
+        activity_counts = df['activity'].value_counts().to_dict()
+        metadata["activity_distribution"] = activity_counts
+
+        # Resource utilization
+        if 'resource' in df.columns:
+            resource_counts = df[df['resource'].notna()]['resource'].value_counts().to_dict()
+            metadata["resource_utilization"] = resource_counts
+
+    return metadata

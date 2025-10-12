@@ -8,6 +8,7 @@ from .csv_exporter import ExportError, export_csv, get_pm4py_column_names
 from .parquet_exporter import export_parquet
 from .json_exporter import export_json
 from .xes_exporter import export_xes
+from .metadata import export_metadata
 
 __all__ = [
     "ExportError",
@@ -15,5 +16,6 @@ __all__ = [
     "export_parquet",
     "export_json",
     "export_xes",
+    "export_metadata",
     "get_pm4py_column_names",
 ]

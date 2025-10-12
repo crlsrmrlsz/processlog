@@ -4,6 +4,7 @@ Command-line interface for Event Log Generator
 
 import sys
 import argparse
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -15,7 +16,14 @@ from event_log_gen import (
     export_parquet,
     export_json,
     export_xes,
+    export_metadata,
     __version__,
+)
+from event_log_gen.utils.naming import (
+    generate_run_name,
+    create_output_path,
+    get_git_commit,
+    get_cli_command,
 )
 
 
@@ -46,14 +54,58 @@ def cmd_generate(args: argparse.Namespace) -> int:
         num_cases = args.cases if args.cases else config.get("num_cases", 100)
         seed = args.seed if args.seed is not None else config.get("seed", 42)
 
-        # Generate event log
+        # Determine output directory
+        if args.output:
+            # User specified output path - use as-is (backward compatibility)
+            output_dir = Path(args.output)
+            output_dir.mkdir(parents=True, exist_ok=True)
+        elif args.no_timestamp:
+            # Flat output without timestamp (for CI/CD)
+            output_dir = Path("output")
+            output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            # Generate timestamped run folder (new default behavior)
+            process_name = config.get("process_name", "process")
+            timestamp = datetime.now()
+
+            # Use custom run name if provided
+            if args.run_name:
+                run_name = generate_run_name(
+                    process_name=process_name,
+                    num_cases=num_cases,
+                    seed=seed,
+                    timestamp=timestamp,
+                    custom_name=args.run_name
+                )
+            else:
+                run_name = generate_run_name(
+                    process_name=process_name,
+                    num_cases=num_cases,
+                    seed=seed,
+                    timestamp=timestamp
+                )
+
+            # Create run directory with optional symlink
+            base_runs_dir = Path("output") / "runs"
+            output_dir = create_output_path(
+                base_dir=base_runs_dir,
+                run_name=run_name,
+                create_symlink=args.link_latest
+            )
+
+            print(f"Run directory: {output_dir}/")
+
+        # Generate event log with metadata
         print(f"Generating {num_cases} cases (seed={seed})...")
-        df = generate_log(config, seed=seed, num_cases=num_cases)
+        df, metadata = generate_log(config, seed=seed, num_cases=num_cases, return_metadata=True)
         print(f"✓ Generated {len(df)} events across {df['case_id'].nunique()} cases")
 
-        # Create output directory
-        output_dir = Path(args.output)
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # Enhance metadata with CLI context
+        git_commit = get_git_commit()
+        if git_commit:
+            metadata["git_commit"] = git_commit
+        metadata["cli_command"] = get_cli_command()
+        metadata["config_file"] = str(args.config)
 
         # Export to requested formats
         formats = args.format if args.format != ['all'] else ['csv', 'parquet', 'json', 'xes']
@@ -74,7 +126,12 @@ def cmd_generate(args: argparse.Namespace) -> int:
                 print(f"✗ Unknown format: {fmt}")
                 continue
 
-            print(f"✓ {output_path}")
+            print(f"✓ {output_path.name}")
+
+        # Export metadata
+        metadata_path = output_dir / "run_metadata.json"
+        export_metadata(metadata, metadata_path)
+        print(f"Metadata: ✓ {metadata_path.name}")
 
         print(f"\n✓ Event logs generated in {output_dir}/")
         return 0
@@ -175,7 +232,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='event-log-gen',
         description='Generate synthetic process event logs for testing and development',
-        epilog='For more information, visit: https://github.com/karlromer/event-log-gen'
+        epilog='For more information, visit: https://github.com/crlsrmrlsz/event-log-gen'
     )
 
     parser.add_argument(
@@ -206,8 +263,8 @@ def create_parser() -> argparse.ArgumentParser:
     gen_parser.add_argument(
         '-o', '--output',
         type=Path,
-        default=Path('output'),
-        help='Output directory (default: output/)'
+        default=None,
+        help='Output directory (default: timestamped run folder)'
     )
     gen_parser.add_argument(
         '-f', '--format',
@@ -225,6 +282,22 @@ def create_parser() -> argparse.ArgumentParser:
         '-s', '--seed',
         type=int,
         help='Random seed (overrides config)'
+    )
+    gen_parser.add_argument(
+        '--run-name',
+        type=str,
+        help='Custom run name (default: auto-generated from process name)'
+    )
+    gen_parser.add_argument(
+        '--no-timestamp',
+        action='store_true',
+        help='Disable timestamped run folders (output to flat directory)'
+    )
+    gen_parser.add_argument(
+        '--link-latest',
+        action='store_true',
+        default=True,
+        help='Create/update "latest" symlink to this run (default: True)'
     )
 
     # Validate command

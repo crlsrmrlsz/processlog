@@ -4,8 +4,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-135%20passing-success)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-80%25-green)](htmlcov/)
+
 
 ## Purpose
 
@@ -28,7 +27,7 @@ Event Log Generator creates synthetic process event logs specifically designed f
 - **Export formats**: CSV, Parquet, JSON (NDJSON), XES
 - **Reproducible**: Seeded RNG for deterministic testing
 - **Fast**: Generate 100K+ events in seconds
-- **Well-tested**: 135 tests, 80% coverage
+
 
 ## Installation
 
@@ -36,7 +35,7 @@ Event Log Generator creates synthetic process event logs specifically designed f
 
 ```bash
 # Clone the repository
-git clone https://github.com/karlromer/event-log-gen.git
+git clone https://github.com/crlsrmrlsz/event-log-gen.git
 cd event-log-gen
 
 # Create virtual environment (recommended)
@@ -63,11 +62,17 @@ All dependencies are automatically installed with `pip install -e .`
 ### CLI Usage (Recommended)
 
 ```bash
-# Generate event logs (all formats)
+# Generate event logs (timestamped run folder, all formats)
 event-log-gen generate -c configs/process_config.yaml -n 1000
 
-# Generate only CSV format
+# Generate with custom run name
+event-log-gen generate -c configs/process_config.yaml -n 1000 --run-name experiment_v2
+
+# Generate only CSV format to specific folder (backward compatible)
 event-log-gen generate -c configs/process_config.yaml -n 100 -f csv -o output/
+
+# Generate without timestamps (flat output for CI/CD)
+event-log-gen generate -c configs/process_config.yaml -n 100 --no-timestamp
 
 # Validate configuration
 event-log-gen validate -c configs/process_config.yaml
@@ -181,6 +186,55 @@ See [`configs/process_config.yaml`](configs/process_config.yaml) for a complete 
 - Working calendar (business hours, weekends, holidays)
 - Custom attributes (cost, priority, location)
 
+## Output Structure
+
+Event logs are organized in **timestamped run folders** by default for better organization and reproducibility:
+
+```
+output/
+├── runs/
+│   ├── 20241012_143022_permit_n1000_s42/
+│   │   ├── events.csv
+│   │   ├── events.parquet
+│   │   ├── events.json
+│   │   ├── events.xes
+│   │   └── run_metadata.json
+│   └── 20241012_150815_permit_n5000_s123/
+│       └── ...
+└── latest -> runs/20241012_150815_permit_n5000_s123/  (symlink)
+```
+
+**Folder naming**: `YYYYMMDD_HHMMSS_{process_name}_n{cases}_s{seed}/`
+- Chronologically sorted (ISO 8601 timestamp)
+- Self-documenting (parameters embedded in name)
+- Non-destructive (each run preserved separately)
+
+**Metadata file** (`run_metadata.json`):
+```json
+{
+  "generator_version": "1.0.0",
+  "generated_at": "2024-10-12T14:30:22.855153",
+  "process_name": "Restaurant Permit Application",
+  "num_cases": 1000,
+  "num_events": 7234,
+  "seed": 42,
+  "statistics": {
+    "mean_cycle_time_hours": 489.6,
+    "mean_events_per_case": 7.2
+  },
+  "activity_distribution": {...},
+  "resource_utilization": {...},
+  "git_commit": "903aab0",
+  "cli_command": "event-log-gen generate ..."
+}
+```
+
+**CLI Options**:
+- Use `-o path/` to specify custom output directory (disables timestamping)
+- Use `--no-timestamp` for flat output in `output/` (CI/CD mode)
+- Use `--run-name custom` to override process name in folder
+- Symlink `output/latest` always points to most recent run (if enabled)
+
 ## Use Cases
 
 ### For Process Mining Tool Developers
@@ -254,7 +308,6 @@ python -c "from event_log_gen import load_config, validate_config; \
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) - System design and module structure
 - [`docs/research_summary.md`](docs/research_summary.md) - PM4Py/XES research and design philosophy
-- [`docs/PROCESS_DEFINITION.md`](docs/PROCESS_DEFINITION.md) - Example process specification
 - [`configs/process_config.yaml`](configs/process_config.yaml) - Annotated configuration example
 
 ## Contributing
@@ -285,7 +338,7 @@ If you use this tool in academic research, please cite:
   title = {Event Log Generator: Synthetic Process Event Logs for Testing},
   author = {Romer, Karl},
   year = {2024},
-  url = {https://github.com/karlromer/event-log-gen},
+  url = {https://github.com/crlsrmrlsz/event-log-gen},
   note = {Process mining test data generator with PM4Py and XES compatibility}
 }
 ```

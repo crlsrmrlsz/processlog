@@ -779,6 +779,7 @@ def _build_metadata(
         "start_date": config.get("start_date"),
         "end_date": config.get("end_date"),
         "timezone": config.get("timezone", "UTC"),
+        "columns": _build_columns_schema(config),
     }
 
     # Statistics
@@ -806,3 +807,32 @@ def _build_metadata(
             metadata["resource_utilization"] = resource_counts
 
     return metadata
+
+
+def _build_columns_schema(config: ConfigDict) -> List[Dict[str, str]]:
+    """
+    Describe every column that appears in the exported event log.
+
+    Lets downstream consumers discover the schema from run_metadata.json
+    alone, without having to read the source YAML config.
+    """
+    columns: List[Dict[str, str]] = [
+        {"name": "case:concept:name", "type": "string", "scope": "event_mandatory"},
+        {"name": "concept:name", "type": "string", "scope": "event_mandatory"},
+        {"name": "time:timestamp", "type": "datetime", "scope": "event_mandatory"},
+        {"name": "org:resource", "type": "string", "scope": "event_mandatory"},
+        {"name": "lifecycle:transition", "type": "string", "scope": "event_mandatory"},
+    ]
+    for attr in config.get("case_attributes", []) or []:
+        columns.append({
+            "name": attr["name"],
+            "type": attr.get("type", "string"),
+            "scope": "case_custom",
+        })
+    for attr in config.get("event_attributes", []) or []:
+        columns.append({
+            "name": attr["name"],
+            "type": attr.get("type", "string"),
+            "scope": "event_custom",
+        })
+    return columns

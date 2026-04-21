@@ -7,6 +7,7 @@ Main orchestration for generating synthetic process event logs.
 import random
 from datetime import datetime, timedelta, time
 from typing import Any, Dict, List
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pandas as pd
 
@@ -109,9 +110,15 @@ def generate_log(
     # Initialize seeded RNG
     rng = random.Random(seed)
 
-    # Parse start date
+    # Parse start date and localize to the configured timezone so every
+    # downstream timestamp (built via timedelta arithmetic) stays tz-aware.
     start_date_str = config.get("start_date", "2024-01-01")
-    start_date = datetime.fromisoformat(start_date_str)
+    tz_name = config.get("timezone", "UTC")
+    try:
+        tzinfo = ZoneInfo(tz_name)
+    except ZoneInfoNotFoundError as e:
+        raise GenerationError(f"Unknown timezone '{tz_name}' in config") from e
+    start_date = datetime.fromisoformat(start_date_str).replace(tzinfo=tzinfo)
 
     # Initialize resource tracking (Phase 4)
     resource_tracker = _initialize_resource_tracker(config)

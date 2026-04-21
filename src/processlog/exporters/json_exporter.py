@@ -46,11 +46,13 @@ def export_json(df: pd.DataFrame, output_path: str | Path, orient: str = "record
 
     # Export to JSON (NDJSON format)
     try:
-        # Convert timestamp to ISO format string for JSON serialization
+        # Serialize timestamps ourselves so that tz-aware values keep their
+        # offset (e.g. "2024-01-01 09:00:00-05:00"). Naive timestamps stay
+        # in the historical "YYYY-MM-DD HH:MM:SS" format.
         if "time:timestamp" in df_export.columns:
-            df_export["time:timestamp"] = pd.to_datetime(df_export["time:timestamp"]).dt.strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            ts = pd.to_datetime(df_export["time:timestamp"])
+            fmt = "%Y-%m-%d %H:%M:%S%:z" if ts.dt.tz is not None else "%Y-%m-%d %H:%M:%S"
+            df_export["time:timestamp"] = ts.dt.strftime(fmt)
 
         # Write as NDJSON (one JSON object per line)
         df_export.to_json(output_path, orient=orient, lines=True, date_format="iso")

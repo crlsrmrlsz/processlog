@@ -93,6 +93,13 @@ def _map_schema(df: pd.DataFrame) -> pd.DataFrame:
 
     df_mapped = df_mapped.rename(columns=rename_dict)
 
+    # Column order: mandatory XES columns first in canonical order, then any
+    # custom attributes sorted alphabetically for stable, diff-friendly output.
+    mandatory_order = list(SCHEMA_MAPPING.values())
+    mandatory = [c for c in mandatory_order if c in df_mapped.columns]
+    custom = sorted(c for c in df_mapped.columns if c not in mandatory_order)
+    df_mapped = df_mapped[mandatory + custom]
+
     # Ensure chronological ordering (required by PM4Py)
     if "case:concept:name" in df_mapped.columns and "time:timestamp" in df_mapped.columns:
         df_mapped = df_mapped.sort_values(

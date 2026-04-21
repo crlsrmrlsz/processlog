@@ -1,8 +1,8 @@
-# Event Log Output Format Specification
+# ProcessLog Output Format Specification
 
-**Document Version**: 1.0
-**Last Updated**: 2025-10-12
-**Purpose**: Interface specification for process flow diagram renderers and process mining tools
+**Document Version**: 1.1
+**Last Updated**: 2026-04-21
+**Purpose**: Interface specification for downstream consumers (e.g., process flow diagram renderers) of ProcessLog-generated event logs
 
 ---
 
@@ -44,14 +44,14 @@ Every event log contains these **5 mandatory columns/fields**:
 |------------|----------------|------|-------------|---------|
 | **Case ID** | `case:concept:name` | String | Unique identifier for the case | `"case_0001"`, `"order_12345"` |
 | **Activity** | `concept:name` | String | Name of the activity performed | `"Application Submitted"`, `"Payment Processed"` |
-| **Timestamp** | `time:timestamp` | ISO 8601 DateTime | When the event occurred | `"2024-01-02 09:00:00.000000"` |
-| **Resource** | `org:resource` | String (optional) | Who/what performed the activity | `"Alice Martinez"`, `"clerk_002"`, `""` (empty for automatic) |
-| **Lifecycle** | `lifecycle:transition` | String | Event state (usually "complete") | `"complete"`, `"start"`, `"suspend"` |
+| **Timestamp** | `time:timestamp` | ISO 8601 DateTime with timezone offset | When the event occurred | `"2024-01-02 09:00:00-05:00"` |
+| **Resource** | `org:resource` | String (nullable) | Who/what performed the activity | `"clerk_002"`, `""` (CSV) / `null` (JSON) for automatic |
+| **Lifecycle** | `lifecycle:transition` | String | Event state | **Always `"complete"` in ProcessLog v1.0** |
 
 **Notes**:
-- Resource is **empty** for automatic/system activities (no human involvement)
-- Timestamps include microsecond precision but may use lower granularity (seconds, minutes, hours)
-- All timestamps are in a single timezone (specified in configuration)
+- **Resource is null/empty** for automatic/system activities (no human involvement). In CSV this is an empty field between commas; in JSON it is `null`; in Parquet it is a null.
+- **Timestamps are timezone-aware.** The tz offset (e.g. `-05:00` / `-04:00` around DST transitions for `America/New_York`) is part of the value in every format. The source-of-truth timezone name is recorded under `timezone` in `run_metadata.json`.
+- **`lifecycle:transition` is always `"complete"`** in the current generator — there are no paired `start`/`complete` events. Activity durations must be inferred from the gap between consecutive events in a case, not from start/complete pairs.
 
 ---
 
@@ -102,25 +102,45 @@ org:role            # "clerk", "manager", "inspector"
 ### Example
 
 ```csv
-case:concept:name,concept:name,time:timestamp,org:resource,lifecycle:transition,case:priority,case:applicant_type,cost:amount
-case_0001,submitted,2024-01-02 09:00:00.000000,,complete,normal,new_business,0.0
-case_0001,intake_validation,2024-01-03 15:36:02.533107,clerk_002,complete,normal,new_business,35.93
-case_0001,review_in_progress,2024-01-08 09:22:25.844521,reviewer_004,complete,normal,new_business,50.50
-case_0001,health_inspection,2024-01-11 11:32:40.285949,inspector_003,complete,normal,new_business,53.80
-case_0001,approved,2024-01-18 09:00:00.000000,,complete,normal,new_business,0.0
-case_0002,submitted,2024-01-02 09:00:00.000000,,complete,high,renewal,0.0
-case_0002,intake_validation,2024-01-03 13:46:19.573019,clerk_001,complete,high,renewal,21.64
-case_0002,rejected,2024-01-05 09:00:00.000000,,complete,high,renewal,0.0
+case:concept:name,concept:name,time:timestamp,org:resource,lifecycle:transition,case:applicant_type,case:priority,cost:amount
+case_0001,submitted,2024-01-02 09:00:00-05:00,,complete,new_business,normal,0.0
+case_0001,intake_validation,2024-01-03 15:36:02.533107-05:00,clerk_002,complete,new_business,normal,35.93
+case_0001,review_in_progress,2024-01-08 09:22:25.844521-05:00,reviewer_004,complete,new_business,normal,50.50
+case_0001,health_inspection,2024-01-11 11:32:40.285949-05:00,inspector_003,complete,new_business,normal,53.80
+case_0001,approved,2024-01-18 09:00:00-05:00,,complete,new_business,normal,0.0
+case_0002,submitted,2024-01-02 09:00:00-05:00,,complete,renewal,high,0.0
+case_0002,intake_validation,2024-01-03 13:46:19.573019-05:00,clerk_001,complete,renewal,high,21.64
+case_0002,rejected,2024-01-05 09:00:00-05:00,,complete,renewal,high,0.0
 ```
+
+> **Note on column order**: the 5 mandatory XES columns come first in the canonical order shown above, then **custom attributes sorted alphabetically by name** (in this example, `case:applicant_type` < `case:priority` < `cost:amount`). This ordering is stable across runs and across the CSV, Parquet, JSON, and XES exporters.
 
 ### Characteristics
 
 - **Character Encoding**: UTF-8
 - **Line Endings**: Unix (`\n`) or Windows (`\r\n`)
 - **Delimiter**: Comma (`,`)
-- **Quoting**: Fields with commas/quotes are quoted with double quotes (`"`)
+- **Quoting**: Fields with commas/quotes are quoted with double quotes (`"`) — written by pandas, RFC 4180 compliant.
 - **Empty Fields**: Represented as empty string (e.g., `,,` for missing resource)
-- **Sorting**: Events are sorted by case ID (ascending), then timestamp (ascending)
+- **Sorting**: Events are sorted by `case:concept:name` (ascending), then `time:timestamp` (ascending). Within a case this gives strictly-non-decreasing timestamps.
+- **Column order**: mandatory XES columns first in canonical order, then custom attributes alphabetically — **stable across runs**.
+
+### JSON Format Details
+
+- **Layout**: NDJSON (one JSON object per line), not a JSON array. Read line-by-line.
+- **Field order**: pandas preserves the schema's column order when writing, so the same mandatory-then-alphabetical ordering applies.
+- **`org:resource`** is written as JSON `null` for automatic activities (not an empty string).
+- **Timestamp** is written as a string with tz offset: `"2024-01-02 09:00:00-05:00"`.
+
+### Parquet Format Details
+
+- **Schema**: PyArrow-inferred. `time:timestamp` is `timestamp[ns, tz=...]` (tz-aware); `org:resource` is a nullable `string`.
+- **Compression**: default (Snappy) — readable by any Apache Arrow / Parquet client.
+
+### XES Format Details
+
+- **Writer**: `pm4py.write_xes` (IEEE 1849-2023 compliant XML).
+- **Consumption**: the intended consumer is `pm4py.read_xes(...)`. Raw XML parsing works but is discouraged — use a PM4Py-compatible reader.
 
 ---
 
@@ -365,41 +385,117 @@ case_0005: submitted → intake → review → request_info → applicant_provid
 
 ---
 
-## File Naming Convention
+## File Layout and Sidecar Metadata
 
-**Standard Pattern**: `{prefix}_{format}.{extension}`
+### Run folder layout
 
-**Examples**:
+Each `processlog generate` invocation creates a timestamped run folder under `output/runs/`:
+
 ```
-events.csv           # Main CSV output
-events.parquet       # Main Parquet output
-events.json          # Main JSON output
-events.xes           # Main XES output
-events_sample.csv    # Small sample (first 50 events) for preview
-metadata.json        # Generation metadata (optional companion file)
+output/runs/20260421_135355_restaurant_permit_n1000_s42/
+├── events.csv             # CSV export (if requested)
+├── events.parquet         # Parquet export (if requested)
+├── events.json            # NDJSON export (if requested)
+├── events.xes             # XES export (if requested)
+└── run_metadata.json      # Sidecar metadata (always present)
 ```
 
-**Metadata File** (optional companion):
+The folder name encodes `{YYYYMMDD}_{HHMMSS}_{process_slug}_n{num_cases}_s{seed}`.
+
+### `run_metadata.json`
+
+The sidecar is the **authoritative schema description** for its sibling event files — a downstream consumer does not need to read the source YAML config.
+
 ```json
 {
   "generator_version": "1.0.0",
+  "generated_at": "2026-04-21T13:53:55.123456",
+  "generation_duration_seconds": 0.07,
+  "seed": 42,
   "process_name": "Restaurant Permit Application",
   "num_cases": 1000,
-  "num_events": 7234,
-  "seed": 42,
-  "generated_at": "2024-10-12T14:32:18Z",
-  "variant_distribution": {
-    "variant_1_direct_approval": {"percentage": 0.58, "count": 580},
-    "variant_2_request_info": {"percentage": 0.24, "count": 240},
-    "variant_3_rejected": {"percentage": 0.10, "count": 100}
+  "num_events": 7347,
+  "start_date": "2024-01-01",
+  "end_date": "2024-06-30",
+  "timezone": "America/New_York",
+  "columns": [
+    {"name": "case:concept:name",    "type": "string",   "scope": "event_mandatory"},
+    {"name": "concept:name",         "type": "string",   "scope": "event_mandatory"},
+    {"name": "time:timestamp",       "type": "datetime", "scope": "event_mandatory"},
+    {"name": "org:resource",         "type": "string",   "scope": "event_mandatory"},
+    {"name": "lifecycle:transition", "type": "string",   "scope": "event_mandatory"},
+    {"name": "case:priority",        "type": "string",   "scope": "case_custom"},
+    {"name": "case:applicant_type",  "type": "string",   "scope": "case_custom"},
+    {"name": "cost:amount",          "type": "float",    "scope": "event_custom"}
+  ],
+  "statistics": {
+    "mean_cycle_time_hours": 501.05,
+    "median_cycle_time_hours": 386.71,
+    "min_cycle_time_hours": 53.53,
+    "max_cycle_time_hours": 1992.0,
+    "std_cycle_time_hours": 278.93,
+    "mean_events_per_case": 7.35
   },
-  "summary_statistics": {
-    "mean_cycle_time_days": 12.4,
-    "median_cycle_time_days": 9.8,
-    "min_cycle_time_days": 3.2,
-    "max_cycle_time_days": 45.7
-  }
+  "activity_distribution": { "submitted": 1000, "intake_validation": 1000, "approved": 777, "rejected": 151, "...": "..." },
+  "resource_utilization":  { "clerk_001": 318, "reviewer_002": 479, "...": "..." },
+  "git_commit": "0cce5e1",
+  "cli_command": "…/venv/bin/processlog generate -c configs/process_config.yaml -n 1000",
+  "config_file": "configs/process_config.yaml"
 }
+```
+
+**The `columns` block** is the machine-readable schema. For each emitted column:
+- `name` — the column name as it appears in every export (CSV header, JSON keys, Parquet schema, XES attribute).
+- `type` — one of `string`, `datetime`, `float`, `int`, `bool`.
+- `scope` — one of:
+  - `event_mandatory` — always present; one of the 5 XES standard columns.
+  - `case_custom` — declared under `case_attributes` in the config; the same value repeats for every event in a case.
+  - `event_custom` — declared under `event_attributes` in the config; varies per event.
+
+---
+
+## Reference Samples
+
+These sample runs are generated by the current codebase (post-fix) and are the recommended test input for downstream projects:
+
+| Path | Cases | Events | Use |
+|---|---|---|---|
+| `output/runs/20260421_135355_restaurant_permit_n1000_s42/` | 1000 | 7347 | Realistic complexity — variant analysis, layout stress test |
+| `output/runs/20260421_135405_restaurant_permit_n5_s42/`   | 5    | 36   | Small fixture for unit tests |
+| `output/runs/20260421_135405_restaurant_permit_n3_s42/`   | 3    | 15   | Minimal fixture — 3 full traces |
+
+All three were generated from `configs/process_config.yaml` (the Restaurant Permit Application process) with `seed=42` and `timezone: America/New_York`. To reproduce any of them from the config:
+
+```bash
+processlog generate -c configs/process_config.yaml -n 5 -f all
+```
+
+---
+
+## Minimum Consumer Pseudocode
+
+The simplest way to consume the CSV, grouped by case:
+
+```python
+import json, pandas as pd
+from pathlib import Path
+
+run = Path("output/runs/20260421_135405_restaurant_permit_n5_s42")
+meta = json.loads((run / "run_metadata.json").read_text())
+
+df = pd.read_csv(run / "events.csv")
+df["time:timestamp"] = pd.to_datetime(df["time:timestamp"], format="ISO8601")
+
+for case_id, trace in df.groupby("case:concept:name"):
+    activities = trace.sort_values("time:timestamp")["concept:name"].tolist()
+    print(case_id, "→", " → ".join(activities))
+```
+
+For XES, use PM4Py:
+
+```python
+import pm4py
+log = pm4py.read_xes(str(run / "events.xes"))
 ```
 
 ---
@@ -449,10 +545,21 @@ metadata.json        # Generation metadata (optional companion file)
 
 ---
 
+## Known Limitations (design-by-intent, not bugs)
+
+1. **`lifecycle:transition` is always `"complete"`.** There are no paired `start`/`complete` events. Activity durations can only be inferred from the gap between consecutive events within a case, not from lifecycle pairs. A downstream flow-diagram generator that expects lifecycle pairs will have to infer start times.
+2. **JSON output is NDJSON, not a JSON array.** Parsers must read line by line.
+3. **`org:resource` is nullable** — for automatic activities (e.g., `submitted`, `approved`) it is the empty string in CSV and `null` in JSON/Parquet. Downstream aggregations over resources must explicitly handle this null.
+4. **One timezone per log.** The entire log uses the single `timezone` value from the config; no per-event timezones, no mixing.
+5. **No inter-case dependencies.** Cases are independent — the simulator does not model queueing between cases. This is a property of the *generator*, not the log format.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-04-21 | Timestamps are now timezone-aware (offset in every format). Added `columns` schema block to `run_metadata.json`. Custom attribute columns are sorted alphabetically. Clarified that `lifecycle:transition` is always `"complete"` in v1.0. Refreshed CSV example and sidecar JSON example against actual output. |
 | 1.0 | 2025-10-12 | Initial specification |
 
 ---

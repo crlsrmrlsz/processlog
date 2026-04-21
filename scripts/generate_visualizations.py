@@ -18,14 +18,14 @@ import sys
 from pathlib import Path
 import tempfile
 
-# Add src to path so we can import event_log_gen
+# Add src to path so we can import processlog
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import pandas as pd
 import pm4py
-from event_log_gen.config import parse_yaml
-from event_log_gen.core.generator import generate_log
-from event_log_gen.exporters.csv_exporter import export_csv
+from processlog.config import parse_yaml
+from processlog.core.generator import generate_log
+from processlog.exporters.csv_exporter import export_csv
 
 
 def main():

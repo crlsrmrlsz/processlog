@@ -19,7 +19,7 @@ class TestCLIGenerate:
     def test_generate_csv_default(self, tmp_path):
         """Test generating CSV with default parameters"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", "configs/examples/simple_process.yaml",
              "-n", "10",
              "-f", "csv",
@@ -35,7 +35,7 @@ class TestCLIGenerate:
     def test_generate_all_formats(self, tmp_path):
         """Test generating all formats at once"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", "configs/examples/simple_process.yaml",
              "-n", "5",
              "-f", "all",
@@ -61,7 +61,7 @@ class TestCLIGenerate:
         # Generate twice with same seed
         for output_dir in [output1, output2]:
             result = subprocess.run(
-                [sys.executable, "-m", "event_log_gen.cli", "generate",
+                [sys.executable, "-m", "processlog.cli", "generate",
                  "-c", "configs/examples/simple_process.yaml",
                  "-n", "5",
                  "-s", str(seed),
@@ -79,7 +79,7 @@ class TestCLIGenerate:
     def test_generate_invalid_config(self):
         """Test error handling with invalid config path"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", "nonexistent_config.yaml",
              "-n", "10"],
             capture_output=True,
@@ -97,7 +97,7 @@ class TestCLIGenerate:
         config_path = os.path.abspath("configs/examples/simple_process.yaml")
 
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", config_path,
              "-n", "5",
              "-f", "csv"],
@@ -107,13 +107,17 @@ class TestCLIGenerate:
         )
 
         assert result.returncode == 0
-        # Should create output/ subdirectory
-        assert (tmp_path / "output" / "events.csv").exists()
+        # Should create output/runs/<timestamped-run>/events.csv
+        runs_dir = tmp_path / "output" / "runs"
+        assert runs_dir.exists()
+        run_folders = list(runs_dir.iterdir())
+        assert len(run_folders) == 1
+        assert (run_folders[0] / "events.csv").exists()
 
     def test_generate_multiple_formats(self, tmp_path):
         """Test generating multiple specific formats"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", "configs/examples/simple_process.yaml",
              "-n", "10",
              "-f", "csv", "parquet",
@@ -137,7 +141,7 @@ class TestCLIValidate:
     def test_validate_valid_config(self):
         """Test validating a valid configuration"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "validate",
+            [sys.executable, "-m", "processlog.cli", "validate",
              "-c", "configs/examples/simple_process.yaml"],
             capture_output=True,
             text=True
@@ -149,7 +153,7 @@ class TestCLIValidate:
     def test_validate_full_config(self):
         """Test validating the full process config"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "validate",
+            [sys.executable, "-m", "processlog.cli", "validate",
              "-c", "configs/process_config.yaml"],
             capture_output=True,
             text=True
@@ -162,7 +166,7 @@ class TestCLIValidate:
     def test_validate_nonexistent_file(self):
         """Test validating nonexistent file"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "validate",
+            [sys.executable, "-m", "processlog.cli", "validate",
              "-c", "nonexistent.yaml"],
             capture_output=True,
             text=True
@@ -178,7 +182,7 @@ class TestCLIValidate:
         invalid_yaml.write_text("process_name: test\nactivities: [broken yaml")
 
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "validate",
+            [sys.executable, "-m", "processlog.cli", "validate",
              "-c", str(invalid_yaml)],
             capture_output=True,
             text=True
@@ -194,7 +198,7 @@ class TestCLIInfo:
     def test_info_simple_process(self):
         """Test displaying info for simple process"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "info",
+            [sys.executable, "-m", "processlog.cli", "info",
              "-c", "configs/examples/simple_process.yaml"],
             capture_output=True,
             text=True
@@ -209,7 +213,7 @@ class TestCLIInfo:
     def test_info_full_config(self):
         """Test displaying info for full config"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "info",
+            [sys.executable, "-m", "processlog.cli", "info",
              "-c", "configs/process_config.yaml"],
             capture_output=True,
             text=True
@@ -223,7 +227,7 @@ class TestCLIInfo:
     def test_info_nonexistent_file(self):
         """Test info command with nonexistent file"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "info",
+            [sys.executable, "-m", "processlog.cli", "info",
              "-c", "nonexistent.yaml"],
             capture_output=True,
             text=True
@@ -238,13 +242,13 @@ class TestCLIHelp:
     def test_help_main(self):
         """Test main help message"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "--help"],
+            [sys.executable, "-m", "processlog.cli", "--help"],
             capture_output=True,
             text=True
         )
 
         assert result.returncode == 0
-        assert "event-log-gen" in result.stdout or "Event Log Generator" in result.stdout
+        assert "processlog" in result.stdout
         assert "generate" in result.stdout
         assert "validate" in result.stdout
         assert "info" in result.stdout
@@ -252,7 +256,7 @@ class TestCLIHelp:
     def test_help_generate(self):
         """Test generate subcommand help"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate", "--help"],
+            [sys.executable, "-m", "processlog.cli", "generate", "--help"],
             capture_output=True,
             text=True
         )
@@ -266,7 +270,7 @@ class TestCLIHelp:
     def test_help_validate(self):
         """Test validate subcommand help"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "validate", "--help"],
+            [sys.executable, "-m", "processlog.cli", "validate", "--help"],
             capture_output=True,
             text=True
         )
@@ -277,7 +281,7 @@ class TestCLIHelp:
     def test_help_info(self):
         """Test info subcommand help"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "info", "--help"],
+            [sys.executable, "-m", "processlog.cli", "info", "--help"],
             capture_output=True,
             text=True
         )
@@ -288,7 +292,7 @@ class TestCLIHelp:
     def test_no_subcommand(self):
         """Test running without subcommand shows help"""
         result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli"],
+            [sys.executable, "-m", "processlog.cli"],
             capture_output=True,
             text=True
         )
@@ -304,7 +308,7 @@ class TestCLIIntegration:
         """Test workflow: validate config, then generate logs"""
         # First validate
         validate_result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "validate",
+            [sys.executable, "-m", "processlog.cli", "validate",
              "-c", "configs/examples/simple_process.yaml"],
             capture_output=True,
             text=True
@@ -313,7 +317,7 @@ class TestCLIIntegration:
 
         # Then generate
         generate_result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", "configs/examples/simple_process.yaml",
              "-n", "10",
              "-f", "csv",
@@ -328,7 +332,7 @@ class TestCLIIntegration:
         """Test workflow: check info, then generate logs"""
         # Check info
         info_result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "info",
+            [sys.executable, "-m", "processlog.cli", "info",
              "-c", "configs/examples/simple_process.yaml"],
             capture_output=True,
             text=True
@@ -337,7 +341,7 @@ class TestCLIIntegration:
 
         # Generate based on info
         generate_result = subprocess.run(
-            [sys.executable, "-m", "event_log_gen.cli", "generate",
+            [sys.executable, "-m", "processlog.cli", "generate",
              "-c", "configs/examples/simple_process.yaml",
              "-n", "20",
              "-o", str(tmp_path / "after_info")],

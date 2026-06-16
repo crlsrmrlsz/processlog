@@ -1,0 +1,49 @@
+name: Release
+
+# Publishes processlog to PyPI on a version tag, via PyPI Trusted Publishing
+# (OIDC) — no long-lived API token is stored in the repo.
+#
+# ONE-TIME SETUP before the first tag (do this in the PyPI web UI):
+#   pypi.org -> your account -> Publishing -> "Add a pending publisher"
+#     PyPI project name : processlog
+#     Owner             : crlsrmrlsz
+#     Repository        : processlog
+#     Workflow filename : release.yml
+#     Environment       : (leave blank — this workflow uses none)
+# A "pending publisher" can be registered before the project exists, so the
+# very first publish is fully token-free.
+#
+# After setup: `git tag v1.2.0 && git push origin v1.2.0` triggers the publish.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for PyPI Trusted Publishing (OIDC)
+
+jobs:
+  release:
+    name: build + publish to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      - name: Check artifacts
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1

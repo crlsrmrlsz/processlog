@@ -1,0 +1,6 @@
+# Keep the published sdist lean and professional: ship the package source,
+# project metadata (pyproject.toml, README), and the license — nothing else.
+# setuptools already excludes configs/, docs/, examples/, scripts/, output/ by
+# default; the one thing it would otherwise sweep in is the test suite.
+prune tests
+global-exclude __pycache__ *.py[cod] *.egg-info

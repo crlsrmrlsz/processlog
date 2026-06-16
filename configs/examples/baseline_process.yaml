@@ -1,0 +1,111 @@
+# Baseline Process - Ideal for Regression Testing
+#
+# This is a stable, predictable process designed for:
+# - Regression testing (consistent results with same seed)
+# - Performance benchmarking
+# - Algorithm validation with known ground truth
+# - Teaching process mining concepts
+#
+# Characteristics:
+# - Single process variant (100% success rate)
+# - Consistent resource performance
+# - No anomalies or delays
+# - 24/7 operation (no calendar restrictions)
+# - Predictable durations
+
+process_name: "Baseline Invoice Processing"
+num_cases: 100
+seed: 42
+start_date: "2024-01-01"
+
+activities:
+  - step: 1
+    id: invoice_received
+    name: "Invoice Received"
+    type: automatic
+    duration:
+      min: 0
+      max: 0.01  # Nearly instant
+    next_steps:
+      - activity: validate_invoice
+        probability: 1.0
+
+  - step: 2
+    id: validate_invoice
+    name: "Validate Invoice"
+    type: human
+    resource_pool: validators
+    duration:
+      typical: 1.0
+      spread: 0.2  # Low variance
+    next_steps:
+      - activity: approve_payment
+        probability: 1.0
+
+  - step: 3
+    id: approve_payment
+    name: "Approve Payment"
+    type: human
+    resource_pool: approvers
+    duration:
+      typical: 0.5
+      spread: 0.1  # Very low variance
+    next_steps:
+      - activity: process_payment
+        probability: 1.0
+
+  - step: 4
+    id: process_payment
+    name: "Process Payment"
+    type: automatic
+    duration:
+      min: 0.1
+      max: 0.2
+    next_steps:
+      - activity: invoice_completed
+        probability: 1.0
+
+  - step: 5
+    id: invoice_completed
+    name: "Invoice Completed"
+    type: final
+    duration:
+      min: 0
+      max: 0.01  # Nearly instant
+    next_steps: []
+
+resource_pools:
+  validators:
+    - id: validator_01
+      name: "Validator A"
+      speed: 1.0
+      consistency: 0.95  # High consistency
+      capacity: 1.0
+
+    - id: validator_02
+      name: "Validator B"
+      speed: 1.0
+      consistency: 0.95
+      capacity: 1.0
+
+  approvers:
+    - id: approver_01
+      name: "Approver X"
+      speed: 1.0
+      consistency: 0.98  # Very high consistency
+      capacity: 1.0
+
+    - id: approver_02
+      name: "Approver Y"
+      speed: 1.0
+      consistency: 0.98
+      capacity: 1.0
+
+working_hours:
+  enabled: false  # 24/7 operation for predictability
+
+anomalies:
+  random_delays:
+    enabled: false  # No anomalies for baseline
+  peak_times:
+    enabled: false  # No peak time effects

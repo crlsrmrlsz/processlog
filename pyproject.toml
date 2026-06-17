@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "processlog"
-version = "1.2.0"
+version = "1.2.1"
 description = "Generate realistic synthetic process event logs for testing and developing process mining software"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -50,7 +50,7 @@ case_0001,approved,2024-01-05 14:20:00-05:00,reviewer_001,complete
 
 Drop that log into mining-lib and you get an interactive process map:
 
-[![A ProcessLog-generated log rendered as an interactive Directly-Follows Graph in mining-lib.](docs/demo.png)](https://crlsrmrlsz.github.io/mining-lib/)
+[![A ProcessLog-generated log rendered as an interactive Directly-Follows Graph in mining-lib.](https://raw.githubusercontent.com/crlsrmrlsz/processlog/main/docs/demo.png)](https://crlsrmrlsz.github.io/mining-lib/)
 
 ## How to use
 
